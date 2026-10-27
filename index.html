@@ -8,7 +8,12 @@
     <script>
       window.LIFECYCLE_DEMO_CONFIG = {
         cloudName: 'demohost',
-        uploadPreset: 'lifecycle_demo',
+        // Add the Product and Creator preset names here when they are ready.
+        uploadPresets: {
+          lifestyle: 'lifestyle_demo',
+          product: 'product_demo',
+          creator: 'creator_demo'
+        },
         dropboxAppKey: '',
         assetEndpoint: 'https://platform-demo-asset-status.lifecycledemo.workers.dev/asset'
       };
@@ -18,6 +23,28 @@
   </head>
   <body>
     <div class="app">
+      <dialog id="asset-type-dialog" class="asset-type-dialog" aria-labelledby="asset-type-title">
+        <form method="dialog" class="asset-type-card">
+          <button class="dialog-close" value="cancel" aria-label="Close image type selection">×</button>
+          <p class="k">UPLOAD CONFIGURATION</p>
+          <h2 id="asset-type-title">What type of image will you add?</h2>
+          <p>We’ll apply different tags and moderation rules for each type of asset.</p>
+          <div class="asset-type-options">
+            <button type="button" class="asset-type-option" data-asset-type="lifestyle">
+              <strong>Lifestyle Image</strong>
+              <span data-preset-state>Campaign, editorial, and in-context imagery</span>
+            </button>
+            <button type="button" class="asset-type-option" data-asset-type="product">
+              <strong>Product Image</strong>
+              <span data-preset-state>Preset coming soon</span>
+            </button>
+            <button type="button" class="asset-type-option" data-asset-type="creator">
+              <strong>Creator / UGC Image</strong>
+              <span data-preset-state>Preset coming soon</span>
+            </button>
+          </div>
+        </form>
+      </dialog>
       <header>
         <div class="title">
           <img src="https://res.cloudinary.com/demohost/image/upload/v1788976604/cloudinary_logo_white_0720_svg.svg" alt="Cloudinary">
@@ -74,6 +101,7 @@
               <small id="note">This demo has been tuned for images, but in practice Cloudinary excels in video in the same workflow.</small>
             </article>
             <aside id="asset-inspector" class="panel inspector" hidden>
+              <div id="ingest-loader" class="canvas-loader" hidden role="status"><i></i><span>Preparing asset record…</span></div>
               <img data-img src="https://res.cloudinary.com/demohost/image/upload/v1787601621/utctndwrbavu4seggpqu.jpg" alt="">
               <dl>
                 <div><dt>Pixel size</dt><dd id="dims">Loading…</dd></div>
@@ -105,7 +133,8 @@
           </div>
           <div id="generate-empty" class="generate-empty"><b>Upload an asset to generate</b><span>Choose an asset to create campaign and motion variations.</span></div>
           <div id="generate-showcase" class="generate-showcase" hidden>
-            <figure><img id="generate-original" src="https://res.cloudinary.com/demohost/image/upload/c_scale,w_300/f_auto/q_auto/v1787601621/utctndwrbavu4seggpqu.jpg" alt="Selected source asset"><figcaption>Original · 300px</figcaption></figure>
+            <div id="generate-loader" class="canvas-loader" hidden role="status"><i></i><span>Creating visual variations…</span></div>
+            <figure class="generate-source"><img id="generate-original" src="https://res.cloudinary.com/demohost/image/upload/c_scale,w_300/f_auto/q_auto/v1787601621/utctndwrbavu4seggpqu.jpg" alt="Selected source asset"><figcaption>Original · 300px wide</figcaption></figure>
             <figure><img src="https://res.cloudinary.com/demohost/image/upload/c_fill,g_auto,w_300,ar_9:16/f_auto/q_auto/v1790997552/gen_fill_bride.jpg" alt="Generative fill result"><figcaption>Generative fill · 9:16</figcaption></figure>
             <figure><video autoplay muted loop playsinline aria-label="Image to video result"><source src="https://res.cloudinary.com/demohost/video/upload/c_fill,g_auto,w_300,ar_9:16/vc_auto/ac_none/f_auto:video/q_auto/v1790997654/image-to-video/i2v_66d2f0d4ef1d4b7b9302a3d8dbae1872.mp4" type="video/mp4"></video><figcaption>Image to video · 9:16</figcaption></figure>
           </div>
@@ -136,6 +165,7 @@
             <span>Rule outcomes will appear here when an image is selected.</span>
           </div>
           <div id="moderate-showcase" class="moderate-showcase" hidden>
+            <div id="moderate-loader" class="canvas-loader" hidden role="status"><i></i><span>Running moderation rules…</span></div>
             <figure class="moderate-preview">
               <img data-img src="https://res.cloudinary.com/demohost/image/upload/v1787601621/utctndwrbavu4seggpqu.jpg" alt="Selected asset under moderation review">
               <figcaption><a id="moderate-job" href="" target="_blank" rel="noopener noreferrer" hidden>Open moderation job</a></figcaption>
@@ -177,6 +207,7 @@
             <span>Cloudinary delivery variants will appear here when an image is selected.</span>
           </div>
           <div id="optimize-showcase" class="optimize-showcase" hidden>
+            <div id="optimize-loader" class="canvas-loader" hidden role="status"><i></i><span>Measuring optimized delivery…</span></div>
             <figure class="optimize-card">
               <figcaption>
                 <small>ORIGINAL UPLOAD</small>
@@ -221,6 +252,7 @@
             <span>Channel-ready variants will appear here when an image is selected.</span>
           </div>
           <div id="deliver-showcase" class="deliver-showcase" hidden>
+            <div id="deliver-loader" class="canvas-loader" hidden role="status"><i></i><span>Preparing delivery variants…</span></div>
             <figure class="deliver-card mobile">
               <div class="deliver-frame"><img id="deliver-mobile" alt="Mobile delivery variant"><b id="deliver-mobile-size">Measuring…</b></div>
               <figcaption><strong>Mobile</strong><span>c_fill,ar_9:16,w_400,f_auto,q_auto</span></figcaption>
@@ -248,6 +280,7 @@
             <p class="value"><b>VALUE</b> Remove handoffs while looping humans in where needed.</p>
           </div>
           <div class="flow panel">
+            <div id="orchestrate-loader" class="canvas-loader" hidden role="status"><i></i><span>Waiting for automation results…</span></div>
             <b>MEDIA FLOWS / ORCHESTRATION: HOW THIS DEMO WORKS <i></i></b>
             <div class="orchestration-flow">
               <article class="orchestration-step">
