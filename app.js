@@ -348,16 +348,35 @@ function syncEnrichVisual() {
   if (!frame?.contentWindow) return;
 
   if (!selectedAsset) {
+    enrichImageSize = null;
+    frame.style.height = '540px';
     frame.contentWindow.postMessage({ type: 'enrich:empty' }, location.origin);
     return;
   }
 
   const imageUrl = updateEnrichPreview();
+  if (imageUrl) {
+    const measurement = new Image();
+    measurement.onload = () => resizeEnrichVisual(measurement.naturalWidth, measurement.naturalHeight);
+    measurement.src = imageUrl;
+  }
   frame.contentWindow.postMessage({
     type: isEnrichmentReady() ? 'enrich:ready' : 'enrich:loading',
     imageUrl,
     asset: enrichmentOnlyAsset(latestEnrichAsset)
   }, location.origin);
+}
+
+let enrichImageSize = null;
+
+function resizeEnrichVisual(width, height) {
+  const frame = $('#enrich-visual');
+  if (!frame || !width || !height) return;
+  enrichImageSize = { width, height };
+  const frameWidth = frame.getBoundingClientRect().width;
+  const targetHeight = frameWidth * (height / width);
+  frame.style.height = `${Math.round(Math.min(900, Math.max(540, targetHeight)))}px`;
+  frame.contentWindow?.postMessage({ type: 'enrich:refit' }, location.origin);
 }
 
 function syncTransformVisual() {
@@ -424,17 +443,13 @@ function syncModerationVisual() {
 
   empty.hidden = true;
   showcase.hidden = false;
-  const status = $('#moderate-status');
   const summaryLabel = $('#moderate-summary');
-  const jobLink = $('#moderate-job');
   const moderation = moderationData();
 
   if (!isModerationReady()) {
-    status.textContent = 'CHECKING';
     summaryLabel.textContent = 'Waiting for structured moderation metadata…';
     ['image-quality-check', 'no-unlicensed-logos', 'no-identifiable-people', 'minimum-image-size']
       .forEach((ruleId) => setModerationRule(ruleId, 'pending'));
-    jobLink.hidden = true;
     setCanvasBusy('moderate', true, 'Running moderation rules…');
     return;
   }
@@ -447,20 +462,11 @@ function syncModerationVisual() {
   const failed = Number(summary.failed) || 0;
   const total = Number(summary.total) || passed + failed || 4;
   const peopleRejected = reasons.some((reason) => reason.includes('identifiable-person'));
-
-  status.textContent = overall;
-  summaryLabel.textContent = `${passed} of ${total} checks approved`;
+  summaryLabel.textContent = `${passed} of ${total} checks approved. Automations can trigger actions when any rule passes or fails. Eg. to normalize, flag, send a message or publish automatically`;
   setModerationRule('image-quality-check', 'approved');
   setModerationRule('no-unlicensed-logos', 'approved');
   setModerationRule('no-identifiable-people', peopleRejected || (overall === 'REJECTED' && failed === 1) ? 'rejected' : 'approved');
   setModerationRule('minimum-image-size', 'approved');
-
-  if (moderation.jobUrl) {
-    jobLink.href = moderation.jobUrl;
-    jobLink.hidden = false;
-  } else {
-    jobLink.hidden = true;
-  }
 
   showcase.classList.remove('is-ready');
   void showcase.offsetWidth;
@@ -677,8 +683,9 @@ $('#asset-type-dialog').addEventListener('click', (event) => {
 
 $('#upload').onclick = openAssetTypeDialog;
 document.querySelectorAll('[data-sample]').forEach((link) => {
-  link.onclick = (event) => {
+  link.addEventListener('click', (event) => {
     event.preventDefault();
+    event.stopImmediatePropagation();
     const sample = sampleAssets[link.dataset.sample];
     if (!sample) return;
     const pollingToken = beginAssetLifecycle();
@@ -693,7 +700,7 @@ document.querySelectorAll('[data-sample]').forEach((link) => {
     $('#note').textContent = 'Lifestyle campaign asset selected. Checking its live metadata.';
     go(ids.indexOf('ingest'));
     pollAsset(sample.assetId, 'image', 0, pollingToken);
-  };
+  }, true);
 });
 $('#file').onchange = (event) => {
   const file = event.target.files[0];
@@ -707,11 +714,19 @@ $('#change-asset').onclick = openAssetTypeDialog;
 $('#enrich-visual').onload = syncEnrichVisual;
 $('#transform-visual').onload = syncTransformVisual;
 addEventListener('message', (event) => {
-  if (event.origin !== location.origin || event.data?.type !== 'transform:loaded') return;
+  if (event.origin !== location.origin) return;
+  if (event.data?.type === 'enrich:resize') {
+    resizeEnrichVisual(event.data.width, event.data.height);
+    return;
+  }
+  if (event.data?.type !== 'transform:loaded') return;
   syncTransformVisual();
 });
+addEventListener('resize', () => {
+  if (enrichImageSize) resizeEnrichVisual(enrichImageSize.width, enrichImageSize.height);
+});
 
-document.querySelectorAll('nav a').forEach((link) => {
+document.querySelectorAll('a[href^="#"]:not([data-sample])').forEach((link) => {
   link.onclick = (event) => {
     event.preventDefault();
     go(ids.indexOf(link.hash.slice(1)));
@@ -726,6 +741,11 @@ $('[data-next]').onclick = () => go(1);
 addEventListener('keydown', (event) => {
   if (event.key === 'ArrowRight') go(activeIndex + 1);
   if (event.key === 'ArrowLeft') go(activeIndex - 1);
+});
+
+addEventListener('hashchange', () => {
+  const nextIndex = ids.indexOf(location.hash.slice(1));
+  if (nextIndex >= 0 && nextIndex !== activeIndex) go(nextIndex);
 });
 
 updateAsset({ source: 'https://res.cloudinary.com/demohost/image/upload/v1787601621/utctndwrbavu4seggpqu.jpg' });

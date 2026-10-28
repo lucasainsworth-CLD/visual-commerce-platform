@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Connected Visual Media Lifecycle</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20261028-22">
     <script>
       window.LIFECYCLE_DEMO_CONFIG = {
         cloudName: 'demohost',
@@ -19,7 +19,7 @@
       };
     </script>
     <script src="https://upload-widget.cloudinary.com/latest/global/all.js"></script>
-    <script src="app.js" defer></script>
+    <script src="app.js?v=20261027-6" defer></script>
   </head>
   <body>
     <div class="app">
@@ -49,42 +49,71 @@
         <div class="title">
           <img src="https://res.cloudinary.com/demohost/image/upload/v1788976604/cloudinary_logo_white_0720_svg.svg" alt="Cloudinary">
           <h1>Connected Visual Media Lifecycle</h1>
-          <span>● LIVE DEMO</span>
         </div>
         <nav aria-label="Lifecycle stages">
           <a class="active" href="#intro">INTRO</a>
-          <a href="#ingest">INGEST</a>
-          <a href="#enrich">ENRICH</a>
-          <a href="#generate">GENERATE</a>
-          <a href="#transform">TRANSFORM</a>
-          <a href="#moderate">MODERATE</a>
-          <a href="#optimize">OPTIMIZE</a>
-          <a href="#deliver">DELIVER</a>
-          <a href="#orchestrate">ORCHESTRATE</a>
+          <div class="lifecycle-flow" aria-label="Connected visual media lifecycle">
+            <a href="#ingest">INGEST</a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#enrich">ENRICH</a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#generate">GENERATE</a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#transform">TRANSFORM</a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#moderate">MODERATE</a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#optimize">OPTIMIZE</a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#deliver">DELIVER</a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#orchestrate">ORCHESTRATE</a>
+          </div>
         </nav>
       </header>
 
       <main>
-        <section id="intro" class="slide active">
-          <div>
-            <p class="k">A THREE-MINUTE WALKTHROUGH</p>
-            <h2>Automating the visual media pipeline — from creation to activation.</h2>
-            <p>Follow one retail asset through the complete connected lifecycle.</p>
-            <button data-next>Start the walkthrough →</button>
+        <section id="intro" class="slide intro-slide active">
+          <div class="intro-copy">
+            <p class="k">VISUAL COMMERCE</p>
+            <h2>The best commerce experiences are powered by Cloudinary.</h2>
+            <p>One visual, every selling experience.</p>
+            <button data-next>See how →</button>
           </div>
-          <div class="intro-graphic">
-            <iframe src="embeds/lifecycle-infographic.html?controls=0" width="100%" height="760" style="border:0" title="Content lifecycle"></iframe>
+          <div class="intro-outcomes" aria-label="Business outcomes">
+            <article>
+              <small>01</small>
+              <h3>Increase conversion</h3>
+              <p>Storefronts that sell.</p>
+              <nav aria-label="Conversion lifecycle steps"><span>LIFECYCLE STEPS</span><a href="#optimize">Optimize →</a><a href="#deliver">Deliver →</a></nav>
+            </article>
+            <article>
+              <small>02</small>
+              <h3>Launch faster</h3>
+              <p>From photoshoot to web, faster.</p>
+              <nav aria-label="Launch lifecycle steps"><span>LIFECYCLE STEPS</span><a href="#ingest">Ingest →</a><a href="#enrich">Enrich →</a><a href="#generate">Generate →</a><a href="#transform">Transform →</a><a href="#moderate">Moderate →</a></nav>
+            </article>
+            <article>
+              <small>03</small>
+              <h3>Run leaner</h3>
+              <p>One platform. Less overhead.</p>
+              <nav aria-label="Efficiency lifecycle steps"><span>LIFECYCLE STEPS</span><a href="#moderate">Moderate →</a><a href="#orchestrate">Orchestrate →</a></nav>
+            </article>
+          </div>
+          <div class="intro-logos">
+            <p>Trusted by leading commerce brands</p>
+            <ul>
+              <li><img src="https://res.cloudinary.com/cloudinary-marketing/images/f_auto,q_auto/v1729269621/puma-logoline/puma-logoline.png" alt="Puma" style="height: 34px"></li>
+              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269619/neiman-marcus-logoline.svg" alt="Neiman Marcus" style="height: 34px"></li>
+              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269617/AMC-logoline.svg" alt="AMC Theatres" style="height: 30px"></li>
+              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269399/manscaped-logoline.svg" alt="Manscaped" style="height: 22px"></li>
+              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269397/mintvelvet-logoline.svg" alt="Mint Velvet" style="height: 36px"></li>
+              <li><img src="https://res.cloudinary.com/cloudinary-marketing/images/f_auto,q_auto/v1729269618/guess-logoline/guess-logoline.png" alt="Guess" style="height: 18px"></li>
+            </ul>
           </div>
         </section>
 
         <section id="ingest" class="slide">
           <div>
             <p class="k">01 / INGEST</p>
-            <h2>Bring every asset in, from anywhere.</h2>
-            <p>Portals, APIs, bulk migration, cloud storage, and URLs all land in one governed foundation.</p>
-            <p class="value"><b>VALUE</b> Ingest, enrich, and transform at any volume.</p>
+            <h2>Get every product live faster.</h2>
+            <p>Supplier feeds, studio shoots, agency campaigns, and creator content land in one governed library, ready for every storefront.</p>
+            <p class="value"><b>VALUE</b> New products go live as soon as their assets arrive, even at peak-season volume.</p>
             <aside class="customer-proofs" aria-label="Customer proof points">
-              <a class="customer-proof" href="https://cloudinary.com/customers/rapha" target="_blank" rel="noopener noreferrer"><b>RAPHA</b><span>Launches videos <strong>50% faster</strong>.</span></a>
+              <a class="customer-proof is-metric" href="https://cloudinary.com/customers/rapha" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo" src="https://res.cloudinary.com/cloudinary-marketing/images/c_scale,w_auto,dpr_auto/f_auto,q_auto/v1669960311/Rapha-logo-2x/Rapha-logo-2x.png?_i=AA" alt="Rapha"></b><span><strong class="proof-metric">50%</strong>faster video launches</span></a>
             </aside>
           </div>
           <div class="ingest-stage">
@@ -94,7 +123,7 @@
               <button id="upload">Upload or Fetch Image</button>
               <span class="sample-prompt">Use a sample asset instead</span>
               <div class="sample-links" aria-label="Example assets">
-                <a class="text-link" data-sample="lifestyle" href="#">Lifestyle campaign image</a>
+                <a class="text-link" data-sample="lifestyle" href="#ingest">Lifestyle campaign image</a>
                 <a class="text-link is-unavailable" aria-disabled="true" href="#">Product image</a>
                 <a class="text-link is-unavailable" aria-disabled="true" href="#">Creator / UGC image</a>
               </div>
@@ -115,8 +144,16 @@
         </section>
 
         <section id="enrich" class="slide">
-          <div><p class="k">02 / ENRICH</p><h2>Every asset understands itself.</h2><p>Auto-tagging and structured metadata keep every visual searchable.</p><p class="value"><b>VALUE</b> Find, reuse, and govern valuable assets.</p></div>
-          <iframe id="enrich-visual" class="enrich-embed" src="embeds/enrich-interactive.html" title="Interactive asset enrichment"></iframe>
+          <div>
+            <p class="k">02 / ENRICH</p>
+            <h2>Find and reuse every asset you paid for.</h2>
+            <p>AI auto-tagging and structured metadata make every product shot and campaign asset searchable by product, season, and campaign.</p>
+            <p class="value"><b>VALUE</b> Teams reuse assets instead of reshooting them, and every asset stays governed.</p>
+            <aside class="customer-proofs" aria-label="Customer proof points">
+              <a class="customer-proof is-stack" href="https://cloudinary.com/customers/river-island" target="_blank" rel="noopener noreferrer"><b>RIVER ISLAND</b><span><strong class="proof-metric"><small>Up to</small>75%</strong>less time spent correcting product images</span></a>
+            </aside>
+          </div>
+          <iframe id="enrich-visual" class="enrich-embed" src="embeds/enrich-interactive.html?v=20261027-4" title="Interactive asset enrichment"></iframe>
           <pre id="metadata-output" hidden></pre>
         </section>
 
@@ -124,11 +161,11 @@
           <div>
             <p class="k">03 / GENERATE</p>
             <h2>New creative, without a new shoot.</h2>
-            <p>Image Gen creates a campaign visual; Image to Video animates an existing product photo.</p>
-            <p class="value"><b>VALUE</b> Generate creative inside the governed media pipeline.</p>
+            <p>Generate campaign visuals and turn existing product photos into video, without booking a studio.</p>
+            <p class="value"><b>VALUE</b> More creative for every launch with less studio spend, all inside your brand governance.</p>
             <aside class="customer-proofs" aria-label="Customer proof points">
-              <a class="customer-proof" href="https://cloudinary.com/customers/adidas" target="_blank" rel="noopener noreferrer"><b>ADIDAS</b><span>Creates <strong>personalized experiences</strong> to market fast.</span></a>
-              <a class="customer-proof" href="https://cloudinary.com/customers/paul-smith" target="_blank" rel="noopener noreferrer"><b>PAUL SMITH</b><span>Reported a <strong>45% boost</strong> in video-enabled sales.</span></a>
+              <a class="customer-proof" href="https://cloudinary.com/customers/adidas" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1740004299/Adidas_Logo/Adidas_Logo.png" alt="adidas"></b><span>Creates <strong>personalized experiences</strong> to market fast.</span></a>
+              <a class="customer-proof is-metric" href="https://cloudinary.com/customers/paul-smith" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo is-wide" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1668465171/Paul-Smith-logo-2x/Paul-Smith-logo-2x.png" alt="Paul Smith"></b><span><strong class="proof-metric">45%</strong>boost in video-enabled sales</span></a>
             </aside>
           </div>
           <div id="generate-empty" class="generate-empty"><b>Upload an asset to generate</b><span>Choose an asset to create campaign and motion variations.</span></div>
@@ -143,11 +180,11 @@
         <section id="transform" class="slide">
           <div>
             <p class="k">04 / TRANSFORM</p>
-            <h2>One image or video, infinite variations.</h2>
-            <p>Smart crops, generative edits, and overlays make every channel-ready experience.</p>
-            <p class="value"><b>VALUE</b> Produce every campaign and channel variation instantly.</p>
+            <h2>One shoot, every channel.</h2>
+            <p>Smart crops, generative edits, and overlays turn one product image or video into every format your storefronts, marketplaces, and ads need.</p>
+            <p class="value"><b>VALUE</b> Launch campaigns across every channel without waiting on a design queue.</p>
             <aside class="customer-proofs" aria-label="Customer proof points">
-              <a class="customer-proof" href="https://cloudinary.com/customers/amc" target="_blank" rel="noopener noreferrer"><b>AMC THEATRES</b><span>Achieved <strong>90% time savings</strong> through automated image transformations.</span></a>
+              <a class="customer-proof is-metric" href="https://cloudinary.com/customers/amc" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1701708355/amc-logo-web/amc-logo-web.png" alt="AMC Theatres"></b><span><strong class="proof-metric">90%</strong>time saved with automated image transformations</span></a>
             </aside>
           </div>
           <iframe id="transform-visual" class="transform-embed" src="embeds/transform-interactive.html" title="Interactive asset transformations"></iframe>
@@ -157,8 +194,11 @@
           <div>
             <p class="k">05 / MODERATE</p>
             <h2>Brand-safe, automatically.</h2>
-            <p>Custom rules screen assets before they reach a storefront, app, or campaign.</p>
-            <p class="value"><b>VALUE</b> Flagged content routes to human review.</p>
+            <p>Custom rules screen supplier and creator content before it reaches a storefront, app, or campaign.</p>
+            <p class="value"><b>VALUE</b> Publish creator and supplier content at scale without brand risk. Edge cases route to human review.</p>
+            <aside class="customer-proofs" aria-label="Customer proof points">
+              <a class="customer-proof" href="https://cloudinary.com/products/moderation" target="_blank" rel="noopener noreferrer"><b>RIVLY</b><span>Automatically reviews seller-submitted images to keep its marketplace trusted.</span></a>
+            </aside>
           </div>
           <div id="moderate-empty" class="moderate-empty">
             <b>Upload an asset to evaluate</b>
@@ -168,14 +208,14 @@
             <div id="moderate-loader" class="canvas-loader" hidden role="status"><i></i><span>Running moderation rules…</span></div>
             <figure class="moderate-preview">
               <img data-img src="https://res.cloudinary.com/demohost/image/upload/v1787601621/utctndwrbavu4seggpqu.jpg" alt="Selected asset under moderation review">
-              <figcaption><a id="moderate-job" href="" target="_blank" rel="noopener noreferrer" hidden>Open moderation job</a></figcaption>
             </figure>
             <div class="moderate-rules" aria-live="polite">
               <div class="moderate-summary">
                 <small>MODERATION RESULT</small>
-                <strong id="moderate-status">CHECKING</strong>
+                <strong>ALL CHECKS PASSED?:</strong>
                 <span id="moderate-summary">Reading structured moderation metadata…</span>
               </div>
+              <p class="moderate-rules-label">RULES IN THIS MODERATION RUN:</p>
               <article class="moderate-rule pending" data-moderation-rule="image-quality-check" style="--delay: .08s">
                 <small>01</small><strong>Image Quality Check</strong><span>Checking</span>
               </article>
@@ -195,11 +235,11 @@
         <section id="optimize" class="slide">
           <div>
             <p class="k">06 / OPTIMIZE</p>
-            <h2>Lighter files, same image.</h2>
-            <p>Automatic format selection and quality tuning work per requesting browser. Resize on the fly for different devices, frame sizes and breakpoints.</p>
-            <p class="value"><b>VALUE</b> Faster experiences with no visible quality compromise.</p>
+            <h2>Faster pages, more conversions.</h2>
+            <p>Every image is served in the best format, quality, and size for each shopper's browser and device, so pages load faster with no visible quality loss.</p>
+            <p class="value"><b>VALUE</b> Faster pages lift conversion and cut bandwidth costs.</p>
             <aside class="customer-proofs" aria-label="Customer proof points">
-              <a class="customer-proof" href="https://cloudinary.com/customers/ag-jeans" target="_blank" rel="noopener noreferrer"><b>AG JEANS</b><span>A <strong>one-second faster</strong> page load drove <strong>20% more conversions</strong>.</span></a>
+              <a class="customer-proof is-metric" href="https://cloudinary.com/customers/ag-jeans" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1788380260/agjeans_logo/agjeans_logo.png" alt="AG Jeans"></b><span><strong class="proof-metric">20%</strong>more conversions from a one-second faster page load</span></a>
             </aside>
           </div>
           <div id="optimize-empty" class="optimize-empty">
@@ -240,15 +280,15 @@
         <section id="deliver" class="slide">
           <div>
             <p class="k">07 / DELIVER</p>
-            <h2>Fast, everywhere, on any device.</h2>
-            <p>Multi-CDN delivery ensures fast, reliable content experiences anywhere in the world. Responsive breakpoints serve the best experience for every device and network.</p>
-            <p class="value"><b>VALUE</b> No separate media pipeline per screen size.</p>
+            <h2>Fast for every shopper, everywhere.</h2>
+            <p>Multi-CDN delivery and responsive breakpoints give every shopper a fast, reliable experience on any device, network, or market.</p>
+            <p class="value"><b>VALUE</b> Expand to new markets and devices without building a separate media pipeline.</p>
             <aside class="customer-proofs" aria-label="Customer proof points">
               <a class="customer-proof" href="https://cloudinary.com/blog/cloudinary_helps_the_global_thermomix_community_cook_up_culinary_masterpieces" target="_blank" rel="noopener noreferrer"><b>VORWERK</b><span>Delivers image and video content <strong>fast, without interruptions</strong>, across every device and served market.</span></a>
             </aside>
           </div>
           <div id="deliver-empty" class="deliver-empty">
-            <b>Upload an asset to deliver</b>
+            <b>Select an asset to deliver</b>
             <span>Channel-ready variants will appear here when an image is selected.</span>
           </div>
           <div id="deliver-showcase" class="deliver-showcase" hidden>
@@ -275,9 +315,12 @@
         <section id="orchestrate" class="slide">
           <div>
             <p class="k">08 / ORCHESTRATE</p>
-            <h2>Every step, running on its own.</h2>
-            <p>MediaFlows connects every capability into a repeatable media operation.</p>
-            <p class="value"><b>VALUE</b> Remove handoffs while looping humans in where needed.</p>
+            <h2>Your media operation, on autopilot.</h2>
+            <p>MediaFlows connects every step into one repeatable workflow, so the same team can handle more launches.</p>
+            <p class="value"><b>VALUE</b> Fewer handoffs and faster launches, with people stepping in only where judgment is needed.</p>
+            <aside class="customer-proofs" aria-label="Customer proof points">
+              <a class="customer-proof is-metric" href="https://cloudinary.com/customers/mint-velvet" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo is-wordmark" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1719441636/MintVelvet_logo/MintVelvet_logo.png" alt="Mint Velvet"></b><span><strong class="proof-metric">6×</strong>Faster photoshoot uploads, synced straight to Shopify</span></a>
+            </aside>
           </div>
           <div class="flow panel">
             <div id="orchestrate-loader" class="canvas-loader" hidden role="status"><i></i><span>Waiting for automation results…</span></div>
