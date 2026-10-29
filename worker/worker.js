@@ -39,11 +39,19 @@ export default {
     }
 
     const assetId = url.searchParams.get('assetId');
-    if (!assetId || !/^[A-Za-z0-9_-]{16,64}$/.test(assetId)) {
-      return json({ error: 'A valid image assetId is required' }, 400, origin);
+    const publicId = url.searchParams.get('publicId');
+    const validAssetId = assetId && /^[A-Za-z0-9_-]{16,64}$/.test(assetId);
+    const validPublicId = publicId
+      && publicId.length <= 255
+      && /^[A-Za-z0-9_./-]+$/.test(publicId)
+      && !publicId.split('/').some((segment) => segment === '.' || segment === '..');
+    if (!validAssetId && !validPublicId) {
+      return json({ error: 'A valid image assetId or publicId is required' }, 400, origin);
     }
 
-    const resourcePath = '/resources/' + encodeURIComponent(assetId);
+    const resourcePath = validAssetId
+      ? '/resources/' + encodeURIComponent(assetId)
+      : '/resources/image/upload/' + publicId.split('/').map(encodeURIComponent).join('/');
     const endpoint = new URL('https://api.cloudinary.com/v1_1/' + env.CLOUDINARY_CLOUD_NAME + resourcePath);
     endpoint.searchParams.set('tags', 'true');
     endpoint.searchParams.set('context', 'true');
@@ -65,7 +73,8 @@ export default {
     }
 
     const demoFolder = env.DEMO_ASSET_FOLDER?.replace(/\/+$/, '');
-    if (demoFolder && !(payload.asset_folder || '').startsWith(demoFolder + '/')) {
+    const assetFolder = (payload.asset_folder || '').replace(/\/+$/, '');
+    if (demoFolder && assetFolder !== demoFolder && !assetFolder.startsWith(demoFolder + '/')) {
       return json({ error: 'Asset is outside the demo folder' }, 403, origin);
     }
 

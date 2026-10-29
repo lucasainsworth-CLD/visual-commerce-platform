@@ -64,7 +64,10 @@
         { label: 'Sepia tone', value: 'e_sepia/c_scale,w_300/f_auto/q_auto' },
         { label: 'Sharpened', value: 'e_sharpen/c_scale,w_300/f_auto/q_auto' },
         { label: 'Smart crop', value: 'c_fill,g_auto,w_300,ar_1:1/f_auto/q_auto' },
-        { label: 'Color tint', value: 'co_rgb:334fc3,e_colorize:40/c_scale,w_300/f_auto/q_auto' }
+        { label: 'Color tint', value: 'co_rgb:334fc3,e_colorize:40/c_scale,w_300/f_auto/q_auto' },
+        { label: 'Image overlay', value: 'c_scale,w_700/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDczMTE4NS8xNV9vZmZfdmdpcGQ2LnBuZw/c_scale,fl_relative,w_0.44/fl_layer_apply,g_south_east,x_20,y_20/f_auto/q_auto' },
+        { label: 'Text overlay', value: 'c_scale,w_700/l_text:Montserrat@google_80_700:Cloudinary%20Media/e_outline:1,co_rgb:e5e7eb/c_scale,fl_relative,w_0.645/fl_layer_apply,g_south_west,x_40,y_40/f_auto/q_auto' },
+        { label: 'Watermark', value: 'c_scale,w_700/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDAwODIyMC9EcmFmdE92ZXJsYXlfbDFlMXZ2LnBuZw/c_scale,fl_relative,w_1.0/fl_layer_apply,g_center/f_auto/q_auto' }
       ];
 
       function deliveryUrl(source, transformation) {
@@ -235,7 +238,7 @@
         const centerX = bounds.width / 2;
         const centerY = bounds.height / 2;
         transformations.forEach((item, index) => {
-          const angle = (-90 + index * 30) * Math.PI / 180;
+          const angle = (-90 + index * 360 / transformations.length) * Math.PI / 180;
           const baseX = centerX + Math.cos(angle) * bounds.width * .41;
           const baseY = centerY + Math.sin(angle) * bounds.height * .39;
           const figure = document.createElement('figure');

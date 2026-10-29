@@ -16,16 +16,16 @@
       .loading { display: none; font-size: 11px; color: #91b9e9; }
       .spinner { width: 25px; height: 25px; border: 2px solid rgba(98,213,238,.25); border-top-color: #62d5ee; border-radius: 50%; animation: spin .8s linear infinite; }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .asset { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; overflow: hidden; opacity: 0; transition: opacity .35s ease; }
-      .asset img { display: block; width: auto !important; height: auto !important; max-width: 100% !important; max-height: 100% !important; object-fit: contain !important; object-position: center; }
+      .asset { position: absolute; z-index: 1; inset: 0; overflow: hidden; opacity: 0; transition: opacity .35s ease; }
+      .asset img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
       .asset::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(3,14,31,.5), transparent 28%, transparent 72%, rgba(3,14,31,.5)); border: 1px solid rgba(182,228,255,.24); pointer-events: none; }
       .leaders { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
       .leaders line { stroke-width: 1; }
       .callouts { position: absolute; z-index: 3; inset: 0; pointer-events: none; }
       .callout { position: absolute; max-width: 118px; padding: 6px 8px; border: 1px solid rgba(111,192,239,.45); border-radius: 7px; background: rgba(5, 23, 45, .92); color: #e7f3ff; box-shadow: 0 7px 22px rgba(0,0,0,.15); font: 9px/1.15 ui-monospace, SFMono-Regular, Menlo, monospace; transition: transform 110ms ease-out, opacity .25s ease; }
       .callout small { display: block; margin-bottom: 4px; color: #69d7ed; font: 8px Inter, Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
-      .callout:nth-child(odd) { border-color: rgba(129, 134, 255, .48); }
-      .callout:nth-child(odd) small { color: #b4b7ff; }
+      .callout[data-tag-source="ai"] { border-color: rgba(129, 134, 255, .48); }
+      .callout[data-tag-source="ai"] small { color: #b4b7ff; }
       .callout[data-type="metadata"] { border-color: rgba(170, 135, 255, .56); }
       .callout[data-type="metadata"] small { color: #d2bcff; }
       .callout.is-muted { opacity: 0; }
@@ -36,7 +36,7 @@
       .stage.ready .empty, .stage.ready .loading { display: none; }
       .stage.loading .empty { display: none; }
       .stage.loading .loading { display: grid; }
-      .stage.empty .asset, .stage.empty .leaders, .stage.empty .callouts, .stage.empty .cluster-controls, .stage.loading .cluster-controls { display: none; }
+      .stage.empty .asset, .stage.empty .leaders, .stage.empty .callouts, .stage.empty .cluster-controls, .stage.loading .asset, .stage.loading .leaders, .stage.loading .callouts, .stage.loading .cluster-controls { display: none; }
     </style>
   </head>
   <body>
@@ -60,6 +60,7 @@
       const controls = document.querySelector('.cluster-controls');
       let items = [];
       let activeView = 'all';
+      let imageRequest = 0;
 
       function displayValue(value) {
         if (Array.isArray(value)) return value.join(', ');
@@ -67,8 +68,12 @@
         return String(value);
       }
 
-      function makeItems(asset) {
-        const tags = (asset.tags || []).slice(0, 15).map((tag) => ({ type: 'tag', group: 'AI tag', value: tag }));
+      function makeItems(asset, categoryTags) {
+        const uploadTags = new Set(categoryTags.map((tag) => String(tag).trim().toLowerCase()));
+        const tags = (asset.tags || []).slice(0, 15).map((tag) => {
+          const source = uploadTags.has(String(tag).trim().toLowerCase()) ? 'category' : 'ai';
+          return { type: 'tag', source, group: source === 'category' ? 'Category tag' : 'AI tag', value: tag };
+        });
         const metadata = Object.entries(asset.metadata || {}).map(([key, value]) => ({ type: 'metadata', group: key.replaceAll('_', ' '), value: displayValue(value) }));
         const context = Object.entries(asset.context || {}).map(([key, value]) => ({ type: 'metadata', group: key.replaceAll('_', ' '), value: displayValue(value) }));
         const structuredMetadata = [...metadata, ...context].slice(0, 10);
@@ -107,25 +112,15 @@
         updateMotion();
       }
 
-      function fitAssetImage() {
-        if (!assetImage.naturalWidth || !assetImage.naturalHeight) return;
-        const scale = Math.min(
-          stage.clientWidth / assetImage.naturalWidth,
-          stage.clientHeight / assetImage.naturalHeight,
-          1
-        );
-        assetImage.style.width = `${Math.round(assetImage.naturalWidth * scale)}px`;
-        assetImage.style.height = `${Math.round(assetImage.naturalHeight * scale)}px`;
-      }
-
-      function render(asset) {
-        items = makeItems(asset);
+      function render(asset, categoryTags = []) {
+        items = makeItems(asset, categoryTags);
         callouts.replaceChildren();
         leaders.replaceChildren();
         items.forEach((item, index) => {
           const node = document.createElement('div');
           node.className = 'callout';
           node.dataset.type = item.type;
+          if (item.source) node.dataset.tagSource = item.source;
           node.style.left = '0';
           node.style.top = '0';
           const label = document.createElement('small');
@@ -184,10 +179,7 @@
 
       stage.addEventListener('pointermove', updateMotion);
       stage.addEventListener('pointerleave', () => updateMotion());
-      addEventListener('resize', () => {
-        fitAssetImage();
-        updateMotion();
-      });
+      addEventListener('resize', updateMotion);
       controls.addEventListener('click', (event) => {
         const button = event.target.closest('button[data-view]');
         if (button) setView(button.dataset.view);
@@ -196,32 +188,27 @@
         if (event.origin !== location.origin) return;
         const message = event.data || {};
         if (!message.type?.startsWith('enrich:')) return;
-        if (message.type === 'enrich:refit') {
-          fitAssetImage();
-          return;
-        }
         if (message.type === 'enrich:empty') {
+          imageRequest += 1;
           stage.className = 'stage empty';
           return;
         }
-        const reportImageSize = () => {
-          if (!assetImage.naturalWidth || !assetImage.naturalHeight) return;
-          fitAssetImage();
-          parent.postMessage({
-            type: 'enrich:resize',
-            width: assetImage.naturalWidth,
-            height: assetImage.naturalHeight
-          }, location.origin);
-        };
-        assetImage.onload = reportImageSize;
-        assetImage.src = message.imageUrl || '';
-        reportImageSize();
         if (message.type === 'enrich:loading') {
+          imageRequest += 1;
           stage.className = 'stage loading';
           return;
         }
-        render(message.asset || {});
-        stage.className = 'stage ready';
+        render(message.asset || {}, message.categoryTags || []);
+        const request = ++imageRequest;
+        stage.className = 'stage loading';
+        const showImage = async () => {
+          if (!assetImage.naturalWidth) return;
+          try { await assetImage.decode(); } catch { /* The load event still provides the image. */ }
+          if (request === imageRequest) stage.className = 'stage ready';
+        };
+        assetImage.onload = showImage;
+        assetImage.src = message.imageUrl || '';
+        if (assetImage.complete) showImage();
       });
     </script>
   </body>

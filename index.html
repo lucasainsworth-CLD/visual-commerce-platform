@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Connected Visual Media Lifecycle</title>
-    <link rel="stylesheet" href="styles.css?v=20261028-22">
+    <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/demohost/image/upload/v1788976605/Cld_Logomark_circle_dark.svg">
+    <link rel="stylesheet" href="styles.css?v=20261029-4">
     <script>
       window.LIFECYCLE_DEMO_CONFIG = {
         cloudName: 'demohost',
@@ -14,33 +15,40 @@
           product: 'product_demo',
           creator: 'creator_demo'
         },
+        structuredMetadataField: 'asset_subject_',
+        structuredMetadataSkuField: 'SKU',
+        structuredMetadataSkuValue: '000123',
         dropboxAppKey: '',
         assetEndpoint: 'https://platform-demo-asset-status.lifecycledemo.workers.dev/asset'
       };
     </script>
     <script src="https://upload-widget.cloudinary.com/latest/global/all.js"></script>
-    <script src="app.js?v=20261027-6" defer></script>
+    <script src="app.js?v=20261029-39" defer></script>
   </head>
   <body>
     <div class="app">
       <dialog id="asset-type-dialog" class="asset-type-dialog" aria-labelledby="asset-type-title">
         <form method="dialog" class="asset-type-card">
           <button class="dialog-close" value="cancel" aria-label="Close image type selection">×</button>
-          <p class="k">UPLOAD CONFIGURATION</p>
-          <h2 id="asset-type-title">What type of image will you add?</h2>
-          <p>We’ll apply different tags and moderation rules for each type of asset.</p>
+          <p class="k">ASSET DETAILS</p>
+          <h2 id="asset-type-title">What kind of image did you select?</h2>
+          <p>Choose a subject for the selected image before it uploads.</p>
           <div class="asset-type-options">
-            <button type="button" class="asset-type-option" data-asset-type="lifestyle">
-              <strong>Lifestyle Image</strong>
-              <span data-preset-state>Campaign, editorial, and in-context imagery</span>
+            <button type="button" class="asset-type-option" data-asset-subject="Lifestyle Shot" data-asset-subject-value="lifestyle_shot">
+              <strong>Lifestyle Shot</strong>
+              <span>Campaign, editorial, and in-context imagery</span>
             </button>
-            <button type="button" class="asset-type-option" data-asset-type="product">
-              <strong>Product Image</strong>
-              <span data-preset-state>Preset coming soon</span>
+            <button type="button" class="asset-type-option" data-asset-subject="Product Shot" data-asset-subject-value="product_shot">
+              <strong>Product Shot</strong>
+              <span>Packshots and product imagery</span>
             </button>
-            <button type="button" class="asset-type-option" data-asset-type="creator">
-              <strong>Creator / UGC Image</strong>
-              <span data-preset-state>Preset coming soon</span>
+            <button type="button" class="asset-type-option" data-asset-subject="UGC / Creator Contribution" data-asset-subject-value="ugc___creator">
+              <strong>UGC / Creator Contribution</strong>
+              <span>User-generated and creator content</span>
+            </button>
+            <button type="button" class="asset-type-option" data-asset-subject="Travel & Hospitality" data-asset-subject-value="sqeyaugdmr39vxwznqxa">
+              <strong>Travel and Hospitality</strong>
+              <span>Destination, property, and experience imagery</span>
             </button>
           </div>
         </form>
@@ -53,14 +61,14 @@
         <nav aria-label="Lifecycle stages">
           <a class="active" href="#intro">INTRO</a>
           <div class="lifecycle-flow" aria-label="Connected visual media lifecycle">
-            <a href="#ingest">INGEST</a><span class="flow-arrow" aria-hidden="true">→</span>
-            <a href="#enrich">ENRICH</a><span class="flow-arrow" aria-hidden="true">→</span>
-            <a href="#generate">GENERATE</a><span class="flow-arrow" aria-hidden="true">→</span>
-            <a href="#transform">TRANSFORM</a><span class="flow-arrow" aria-hidden="true">→</span>
-            <a href="#moderate">MODERATE</a><span class="flow-arrow" aria-hidden="true">→</span>
-            <a href="#optimize">OPTIMIZE</a><span class="flow-arrow" aria-hidden="true">→</span>
-            <a href="#deliver">DELIVER</a><span class="flow-arrow" aria-hidden="true">→</span>
-            <a href="#orchestrate">ORCHESTRATE</a>
+            <a href="#ingest"><span>INGEST</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#enrich"><span>ENRICH</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#generate"><span>GENERATE</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#transform"><span>TRANSFORM</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#moderate"><span>MODERATE</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#optimize"><span>OPTIMIZE</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#deliver"><span>DELIVER</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#orchestrate"><span>ORCHESTRATE</span></a>
           </div>
         </nav>
       </header>
@@ -124,8 +132,9 @@
               <span class="sample-prompt">Use a sample asset instead</span>
               <div class="sample-links" aria-label="Example assets">
                 <a class="text-link" data-sample="lifestyle" href="#ingest">Lifestyle campaign image</a>
-                <a class="text-link is-unavailable" aria-disabled="true" href="#">Product image</a>
-                <a class="text-link is-unavailable" aria-disabled="true" href="#">Creator / UGC image</a>
+                <a class="text-link" data-sample="product" href="#ingest">Product image</a>
+                <a class="text-link" data-sample="travel" href="#ingest">Travel &amp; Hospitality image</a>
+                <a class="text-link" data-sample="creator" href="#ingest">Creator / UGC image</a>
               </div>
               <small id="note">This demo has been tuned for images, but in practice Cloudinary excels in video in the same workflow.</small>
             </article>
@@ -136,7 +145,7 @@
                 <div><dt>Pixel size</dt><dd id="dims">Loading…</dd></div>
                 <div><dt>Format</dt><dd id="format">JPG</dd></div>
                 <div><dt>File size</dt><dd id="size">Cloudinary original</dd></div>
-                <div><dt>Unique asset ID</dt><dd>assigned on ingest</dd></div>
+                <div><dt>Unique asset ID</dt><dd id="asset-id">assigned on ingest</dd></div>
               </dl>
               <button id="change-asset" class="change-asset">Change asset</button>
             </aside>
@@ -153,7 +162,7 @@
               <a class="customer-proof is-stack" href="https://cloudinary.com/customers/river-island" target="_blank" rel="noopener noreferrer"><b>RIVER ISLAND</b><span><strong class="proof-metric"><small>Up to</small>75%</strong>less time spent correcting product images</span></a>
             </aside>
           </div>
-          <iframe id="enrich-visual" class="enrich-embed" src="embeds/enrich-interactive.html?v=20261027-4" title="Interactive asset enrichment"></iframe>
+          <iframe id="enrich-visual" class="enrich-embed" src="embeds/enrich-interactive.html?v=20261029-3" title="Interactive asset enrichment"></iframe>
           <pre id="metadata-output" hidden></pre>
         </section>
 
@@ -187,7 +196,7 @@
               <a class="customer-proof is-metric" href="https://cloudinary.com/customers/amc" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1701708355/amc-logo-web/amc-logo-web.png" alt="AMC Theatres"></b><span><strong class="proof-metric">90%</strong>time saved with automated image transformations</span></a>
             </aside>
           </div>
-          <iframe id="transform-visual" class="transform-embed" src="embeds/transform-interactive.html" title="Interactive asset transformations"></iframe>
+          <iframe id="transform-visual" class="transform-embed" src="embeds/transform-interactive.html?v=20261029-1" title="Interactive asset transformations"></iframe>
         </section>
 
         <section id="moderate" class="slide">
@@ -212,22 +221,11 @@
             <div class="moderate-rules" aria-live="polite">
               <div class="moderate-summary">
                 <small>MODERATION RESULT</small>
-                <strong>ALL CHECKS PASSED?:</strong>
+                <strong>ALL CHECKS PASSED?</strong>
                 <span id="moderate-summary">Reading structured moderation metadata…</span>
               </div>
               <p class="moderate-rules-label">RULES IN THIS MODERATION RUN:</p>
-              <article class="moderate-rule pending" data-moderation-rule="image-quality-check" style="--delay: .08s">
-                <small>01</small><strong>Image Quality Check</strong><span>Checking</span>
-              </article>
-              <article class="moderate-rule pending" data-moderation-rule="no-unlicensed-logos" style="--delay: .16s">
-                <small>02</small><strong>No Unlicensed Logos</strong><span>Checking</span>
-              </article>
-              <article class="moderate-rule pending" data-moderation-rule="no-identifiable-people" style="--delay: .24s">
-                <small>03</small><strong>No Identifiable People</strong><span>Checking</span>
-              </article>
-              <article class="moderate-rule pending" data-moderation-rule="minimum-image-size" style="--delay: .32s">
-                <small>04</small><strong>Minimum Image Size</strong><span>Checking</span>
-              </article>
+              <div id="moderate-rule-list" class="moderate-rule-list"></div>
             </div>
           </div>
         </section>
@@ -322,30 +320,35 @@
               <a class="customer-proof is-metric" href="https://cloudinary.com/customers/mint-velvet" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo is-wordmark" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1719441636/MintVelvet_logo/MintVelvet_logo.png" alt="Mint Velvet"></b><span><strong class="proof-metric">6×</strong>Faster photoshoot uploads, synced straight to Shopify</span></a>
             </aside>
           </div>
-          <div class="flow panel">
-            <div id="orchestrate-loader" class="canvas-loader" hidden role="status"><i></i><span>Waiting for automation results…</span></div>
-            <b>MEDIA FLOWS / ORCHESTRATION: HOW THIS DEMO WORKS <i></i></b>
-            <div class="orchestration-flow">
-              <article class="orchestration-step">
-                <small>01 / INGEST</small>
-                <strong>Upload presets set the path.</strong>
-                <p>They define the scope, pre-formatting, and tagging on upload. Each image category enters a different DAM folder, where different automation rules apply.</p>
-              </article>
-              <article class="orchestration-step">
-                <small>02 / ENRICH</small>
-                <strong>Metadata makes assets usable.</strong>
-                <p>Structured metadata is added on upload. AI auto-tagging is applied, and tags with more than 70% confidence are automatically added.</p>
-              </article>
-              <article class="orchestration-step">
-                <small>03 / MODERATE</small>
-                <strong>Rules match the asset type.</strong>
-                <p>Moderation runs against different rules based on the upload preset: Lifestyle, Product, or Creator/UGC.</p>
-              </article>
-              <article class="orchestration-step">
-                <small>04 / GENERATE</small>
-                <strong>Generative output stays governed.</strong>
-                <p>Generative content can be created automatically or manually. In this demo, image-to-video is manually reviewed before publication.</p>
-              </article>
+          <div class="flow panel orchestrate-frame">
+            <div id="orchestrate-empty" class="deliver-empty">
+              <b>Select an asset to orchestrate</b>
+              <span>The orchestration workflow will appear here when an image is selected.</span>
+            </div>
+            <div id="orchestrate-diagram" hidden>
+              <b>MEDIA FLOWS / ORCHESTRATION: HOW THIS DEMO WORKS <i></i></b>
+              <div class="orchestration-flow">
+                <article class="orchestration-step">
+                  <small>01 / INGEST</small>
+                  <strong>Upload presets set the path.</strong>
+                  <p>They define the scope, pre-formatting, and tagging on upload. Each image category enters a different DAM folder, where different automation rules apply.</p>
+                </article>
+                <article class="orchestration-step">
+                  <small>02 / ENRICH</small>
+                  <strong>Metadata makes assets usable.</strong>
+                  <p>Structured metadata is added on upload. AI auto-tagging is applied, and tags with more than 70% confidence are automatically added.</p>
+                </article>
+                <article class="orchestration-step">
+                  <small>03 / MODERATE</small>
+                  <strong>Rules match the asset type.</strong>
+                  <p>Moderation runs against different rules based on the upload preset: Lifestyle, Product, or Creator/UGC.</p>
+                </article>
+                <article class="orchestration-step">
+                  <small>04 / GENERATE</small>
+                  <strong>Generative output stays governed.</strong>
+                  <p>Generative content can be created automatically or manually. In this demo, image-to-video is manually reviewed before publication.</p>
+                </article>
+              </div>
             </div>
           </div>
         </section>

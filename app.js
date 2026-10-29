@@ -2,9 +2,50 @@ const ids = ['intro', 'ingest', 'enrich', 'generate', 'transform', 'moderate', '
 const names = ['Intro', '1 Ingest', '2 Enrich', '3 Generate', '4 Transform', '5 Moderate', '6 Optimize', '7 Deliver', '8 Orchestrate'];
 const config = window.LIFECYCLE_DEMO_CONFIG || {};
 const uploadPresets = config.uploadPresets || { lifestyle: config.uploadPreset };
+const structuredMetadataField = config.structuredMetadataField || 'asset_subject_';
+const structuredMetadataSkuField = config.structuredMetadataSkuField || 'SKU';
+const structuredMetadataSkuValue = config.structuredMetadataSkuValue || '000123';
+const lifestyleSubjectValue = 'lifestyle_shot';
+const productSubjectValue = 'product_shot';
+const creatorSubjectValue = 'ugc___creator';
+const travelSubjectValue = 'sqeyaugdmr39vxwznqxa';
+const moderationRuleCatalog = {
+  people: { label: 'No Identifiable People', rejectionReason: 'Identifiable person detected' },
+  quality: { label: 'Image Quality Check', rejectionReason: 'Low image quality' },
+  logos: { label: 'Known Logo Detection', rejectionReason: 'unlicensed logos found' },
+  watermark: { label: 'Watermark Detection', rejectionReason: 'Watermark detected' },
+  size: { label: 'Minimum Image Size', rejectionReason: 'Image too small' },
+  background: { label: 'Clean White Background', rejectionReason: 'Background check failed' },
+  centered: { label: 'Centered Product', rejectionReason: 'Product framing issue' },
+  aiGenerated: { label: 'AI Generated Image Detection', rejectionReason: 'Likely AI-generated' },
+  travel: { label: 'Travel and Hospitality Image Check', rejectionReason: "Image looks like it's not travel & hospitality focused" },
+  originality: { label: 'Image Originality Check', rejectionReason: 'This image was found online' },
+  safeForWork: { label: 'Safe for Work', rejectionReason: 'SFW check failed' }
+};
+const moderationRulesBySubject = {
+  [lifestyleSubjectValue]: ['people', 'quality', 'logos', 'watermark', 'size'],
+  [productSubjectValue]: ['background', 'quality', 'watermark', 'centered'],
+  [travelSubjectValue]: ['aiGenerated', 'travel', 'watermark', 'size', 'people'],
+  [creatorSubjectValue]: ['safeForWork', 'originality', 'aiGenerated', 'watermark', 'quality']
+};
+const lifestyleUploadTags = ['lifestyle', 'look-book', 'fashion', 'seasonal', 'mood-board', 'campaign'];
+const productUploadTags = ['product', 'SKU-lookup', 'angles', 'seasonal', 'customize', 'catalog'];
+const creatorUploadTags = ['creator', 'UGC', 'review', 'opinion', 'contribution', 'customer'];
+const travelUploadTags = ['travel', 'leisure', 'destination', 'visit', 'hospitality', 'places'];
+const debugUpload = (label, details) => {
+  if (window.console?.debug) console.debug(`[Cloudinary upload] ${label}`, details);
+};
+const tagsForSubject = (assetSubjectValue) => {
+  if (assetSubjectValue === lifestyleSubjectValue) return lifestyleUploadTags;
+  if (assetSubjectValue === productSubjectValue) return productUploadTags;
+  if (assetSubjectValue === creatorSubjectValue) return creatorUploadTags;
+  if (assetSubjectValue === travelSubjectValue) return travelUploadTags;
+  return null;
+};
 const $ = (selector) => document.querySelector(selector);
 let activeIndex = 0;
 const uploadWidgets = new Map();
+let resolveAssetSubjectSelection;
 let assetSource;
 let selectedAsset = false;
 let latestEnrichAsset;
@@ -24,9 +65,25 @@ const lifecycleLabels = {
 const lifecycleTimers = new Map();
 const sampleAssets = {
   lifestyle: {
-    source: 'https://res.cloudinary.com/demohost/image/upload/v1790954902/kwgoitjaob4m9eoy7ocw.jpg',
-    assetId: '79ac8f2844766065ab27dbe4c797a866',
-    format: 'jpg'
+    source: 'https://res.cloudinary.com/demohost/image/upload/v1793289865/lsi1nr9n4xvwldut6opg.jpg',
+    publicId: 'lsi1nr9n4xvwldut6opg',
+    format: 'jpg',
+    label: 'Lifestyle campaign image'
+  },
+  product: {
+    source: 'https://res.cloudinary.com/demohost/image/upload/hn7pclfnel8f3vfvxxse',
+    publicId: 'hn7pclfnel8f3vfvxxse',
+    label: 'Product image'
+  },
+  travel: {
+    source: 'https://res.cloudinary.com/demohost/image/upload/b3yzsvls1blajg8lhamv',
+    publicId: 'b3yzsvls1blajg8lhamv',
+    label: 'Travel & Hospitality image'
+  },
+  creator: {
+    source: 'https://res.cloudinary.com/demohost/image/upload/kfmu2hxnxtcc6xfy7ca7',
+    publicId: 'kfmu2hxnxtcc6xfy7ca7',
+    label: 'Creator / UGC image'
   }
 };
 
@@ -48,12 +105,38 @@ function setLifecycleStatus(stage, status) {
   const link = document.querySelector(`nav a[href="#${stage}"]`);
   if (!link) return;
   link.dataset.lifecycleStatus = status;
+  link.dataset.lifecycleGlow = status;
   link.setAttribute('aria-label', `${link.textContent.trim()}: ${lifecycleLabels[status]}`);
 }
 
-function isEnrichmentReady(asset = latestEnrichAsset) {
+function activateLifecycleGlow() {
+  const flow = document.querySelector('.lifecycle-flow');
+  if (!flow) return;
+  clearTimeout(lifecycleTimers.get('glow-reveal'));
+  flow.classList.remove('has-asset', 'is-revealing');
+  requestAnimationFrame(() => {
+    flow.classList.add('has-asset', 'is-revealing');
+    lifecycleTimers.set('glow-reveal', setTimeout(() => flow.classList.remove('is-revealing'), 2100));
+  });
+}
+
+function hasAltDescription(asset) {
+  const context = asset?.context?.custom || asset?.context || {};
+  return Object.entries(context).some(([key, value]) => {
+    const normalizedKey = normalizeFieldKey(key);
+    return ['alt', 'description_alt'].includes(normalizedKey)
+      && value != null
+      && String(value).trim().length > 0;
+  });
+}
+
+function hasEnrichmentData(asset = latestEnrichAsset) {
   const enrichment = enrichmentOnlyAsset(asset);
   return Boolean(enrichment?.tags?.length || Object.keys(enrichment?.metadata || {}).length || Object.keys(enrichment?.context || {}).length);
+}
+
+function isEnrichmentReady(asset = latestEnrichAsset) {
+  return hasAltDescription(enrichmentOnlyAsset(asset));
 }
 
 function normalizeFieldKey(key) {
@@ -87,13 +170,16 @@ function isModerationReady(asset = latestModerationAsset) {
   const moderation = moderationData(asset);
   const status = String(moderation.status || '').toLowerCase();
   const completedStatus = status && !['pending', 'queued', 'processing', 'in_progress'].includes(status);
-  return Boolean(completedStatus || moderation.summary || moderation.jobUrl || moderation.reasons || moderation.completedModeration);
+  return Boolean(completedStatus || moderation.summary || moderation.reasons || moderation.completedModeration);
 }
 
 function syncOrchestrationStatus() {
-  const complete = lifecycleStatus.enrich === 'ready' && lifecycleStatus.moderate === 'ready';
-  setLifecycleStatus('orchestrate', complete ? 'ready' : 'processing');
-  setCanvasBusy('orchestrate', !complete, 'Waiting for enrichment and moderation results…');
+  setLifecycleStatus('orchestrate', selectedAsset ? 'ready' : 'idle');
+  setCanvasBusy('orchestrate', false);
+  const empty = $('#orchestrate-empty');
+  if (empty) empty.hidden = selectedAsset;
+  const diagram = $('#orchestrate-diagram');
+  if (diagram) diagram.hidden = !selectedAsset;
 }
 
 function beginAssetLifecycle() {
@@ -133,6 +219,7 @@ function go(index) {
     if (ids[activeIndex] === 'moderate') syncModerationVisual();
     if (ids[activeIndex] === 'optimize') syncOptimizeVisual();
     if (ids[activeIndex] === 'deliver') syncDeliverVisual();
+    if (ids[activeIndex] === 'orchestrate') syncOrchestrationStatus();
   });
 }
 
@@ -140,10 +227,16 @@ function formatBytes(value) {
   return value < 1048576 ? Math.round(value / 1024) + ' KB' : (value / 1048576).toFixed(1) + ' MB';
 }
 
+function setAssetId(value) {
+  const assetId = $('#asset-id');
+  if (assetId) assetId.textContent = value || 'assigned on ingest';
+}
+
 function updateAsset(info) {
   const source = info.secure_url || info.url || info.source;
   if (!source) return;
   assetSource = source;
+  setAssetId(info.asset_id || info.assetId);
   latestEnrichAsset = undefined;
   latestModerationAsset = undefined;
   latestAssetFingerprint = undefined;
@@ -251,8 +344,9 @@ async function updateOptimizeMeasurements(originalUrl, deliveryUrl) {
   if (deliverySize) deliverySize.textContent = measuredDelivery ? formatBytes(measuredDelivery) : 'Unavailable';
   renderOptimizeSavings(originalAssetBytes, measuredDelivery);
   if (selectedAsset) {
-    setLifecycleStatus('optimize', 'ready');
-    setCanvasBusy('optimize', false);
+    const resolved = Boolean(originalAssetBytes && measuredDelivery);
+    setLifecycleStatus('optimize', resolved ? 'ready' : 'processing');
+    setCanvasBusy('optimize', !resolved);
   }
 }
 
@@ -316,8 +410,8 @@ async function updateDeliverVariants() {
 function updateEnrichPreview() {
   if (!assetSource) return;
 
-  const ingestFrame = $('#asset-inspector');
-  const frameWidth = Math.round(ingestFrame?.getBoundingClientRect().width || 680);
+  const enrichFrame = $('#enrich-visual');
+  const frameWidth = Math.round(enrichFrame?.getBoundingClientRect().width || 960);
   const deliveryWidth = Math.max(1, frameWidth);
   // A local preview cannot be transformed until it has been uploaded to Cloudinary.
   if (!assetSource.includes('/image/upload/')) {
@@ -354,16 +448,15 @@ function syncEnrichVisual() {
     return;
   }
 
-  const imageUrl = updateEnrichPreview();
-  if (imageUrl) {
-    const measurement = new Image();
-    measurement.onload = () => resizeEnrichVisual(measurement.naturalWidth, measurement.naturalHeight);
-    measurement.src = imageUrl;
+  if (latestEnrichAsset?.width && latestEnrichAsset?.height) {
+    resizeEnrichVisual(latestEnrichAsset.width, latestEnrichAsset.height);
   }
+  const imageUrl = updateEnrichPreview();
   frame.contentWindow.postMessage({
-    type: isEnrichmentReady() ? 'enrich:ready' : 'enrich:loading',
+    type: hasEnrichmentData() ? 'enrich:ready' : 'enrich:loading',
     imageUrl,
-    asset: enrichmentOnlyAsset(latestEnrichAsset)
+    asset: enrichmentOnlyAsset(latestEnrichAsset),
+    categoryTags: tagsForSubject(latestEnrichAsset?.metadata?.[structuredMetadataField]) || []
   }, location.origin);
 }
 
@@ -376,7 +469,6 @@ function resizeEnrichVisual(width, height) {
   const frameWidth = frame.getBoundingClientRect().width;
   const targetHeight = frameWidth * (height / width);
   frame.style.height = `${Math.round(Math.min(900, Math.max(540, targetHeight)))}px`;
-  frame.contentWindow?.postMessage({ type: 'enrich:refit' }, location.origin);
 }
 
 function syncTransformVisual() {
@@ -421,13 +513,69 @@ function moderationReasons(value) {
   }
 }
 
-function setModerationRule(ruleId, state) {
-  const rule = document.querySelector(`[data-moderation-rule="${ruleId}"]`);
-  if (!rule) return;
-  rule.classList.remove('pending', 'approved', 'rejected');
-  rule.classList.add(state);
-  const label = rule.querySelector('span');
-  if (label) label.textContent = state === 'approved' ? 'Approved' : state === 'rejected' ? 'Rejected' : 'Checking';
+function renderModerationRows(rows) {
+  const list = $('#moderate-rule-list');
+  if (!list) return;
+  list.replaceChildren(...rows.map(({ label, state, rejectionReason, statusLabel }, index) => {
+    const rule = document.createElement('article');
+    rule.className = `moderate-rule ${state}`;
+    rule.style.setProperty('--delay', `${(index + 1) * .08}s`);
+    const number = document.createElement('small');
+    number.textContent = String(index + 1).padStart(2, '0');
+    const name = document.createElement('strong');
+    name.textContent = label;
+    const result = document.createElement('span');
+    result.textContent = statusLabel || (state === 'approved' ? 'Approved' : state === 'rejected' ? 'Rejected' : 'Checking');
+    rule.append(number, name, result);
+    if (rejectionReason) {
+      const detail = document.createElement('p');
+      detail.className = 'moderate-rule-reason';
+      detail.textContent = rejectionReason;
+      rule.append(detail);
+    }
+    return rule;
+  }));
+}
+
+function moderationReasonLabel(value) {
+  const label = String(value).replace(/[_-]+/g, ' ').trim();
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function categoryModerationRows(asset, summary, reasons) {
+  const subject = asset?.metadata?.[structuredMetadataField];
+  const ruleIds = moderationRulesBySubject[subject];
+  if (!ruleIds) return null;
+
+  const matchedReasonIndices = new Set();
+  const rows = ruleIds.map((ruleId) => {
+    const rule = moderationRuleCatalog[ruleId];
+    const expected = normalizeFieldKey(rule.rejectionReason);
+    const reasonIndex = reasons.findIndex((reason, index) => (
+      !matchedReasonIndices.has(index) && normalizeFieldKey(reason) === expected
+    ));
+    if (reasonIndex >= 0) matchedReasonIndices.add(reasonIndex);
+    return {
+      label: rule.label,
+      state: reasonIndex >= 0 ? 'rejected' : 'pending',
+      ...(reasonIndex >= 0 ? { rejectionReason: rule.rejectionReason } : {})
+    };
+  });
+  const allResultsAccountedFor = Number(summary.total) === ruleIds.length
+    && Number(summary.failed) === matchedReasonIndices.size
+    && Number(summary.passed) === ruleIds.length - matchedReasonIndices.size
+    && matchedReasonIndices.size === reasons.length;
+  if (allResultsAccountedFor) {
+    rows.forEach((row) => { if (row.state === 'pending') row.state = 'approved'; });
+  } else {
+    rows.forEach((row) => { if (row.state === 'pending') row.statusLabel = 'Not reported'; });
+  }
+  reasons.forEach((reason, index) => {
+    if (!matchedReasonIndices.has(index)) {
+      rows.push({ label: 'Other failed check', state: 'rejected', rejectionReason: moderationReasonLabel(reason) });
+    }
+  });
+  return rows;
 }
 
 function syncModerationVisual() {
@@ -448,25 +596,30 @@ function syncModerationVisual() {
 
   if (!isModerationReady()) {
     summaryLabel.textContent = 'Waiting for structured moderation metadata…';
-    ['image-quality-check', 'no-unlicensed-logos', 'no-identifiable-people', 'minimum-image-size']
-      .forEach((ruleId) => setModerationRule(ruleId, 'pending'));
+    renderModerationRows([{ label: 'Reading rule outcomes', state: 'pending' }]);
     setCanvasBusy('moderate', true, 'Running moderation rules…');
     return;
   }
 
   const summary = parseModerationSummary(moderation.summary);
-  const reasons = moderationReasons(moderation.reasons)
-    .map((reason) => reason.toLowerCase());
-  const overall = String(moderation.status || (summary.failed ? 'rejected' : 'approved')).toUpperCase();
+  const reasons = moderationReasons(moderation.reasons).filter(Boolean);
   const passed = Number(summary.passed) || 0;
   const failed = Number(summary.failed) || 0;
-  const total = Number(summary.total) || passed + failed || 4;
-  const peopleRejected = reasons.some((reason) => reason.includes('identifiable-person'));
-  summaryLabel.textContent = `${passed} of ${total} checks approved. Automations can trigger actions when any rule passes or fails. Eg. to normalize, flag, send a message or publish automatically`;
-  setModerationRule('image-quality-check', 'approved');
-  setModerationRule('no-unlicensed-logos', 'approved');
-  setModerationRule('no-identifiable-people', peopleRejected || (overall === 'REJECTED' && failed === 1) ? 'rejected' : 'approved');
-  setModerationRule('minimum-image-size', 'approved');
+  const total = Number(summary.total) || passed + failed;
+  summaryLabel.textContent = total
+    ? `${passed} of ${total} checks approved. Automations can trigger actions when any rule passes or fails.`
+    : `Moderation ${String(moderation.status || 'complete').toLowerCase()}. Rule counts are not available.`;
+  const rows = categoryModerationRows(latestModerationAsset, summary, reasons) ||
+    reasons.map((reason) => ({ label: moderationReasonLabel(reason), state: 'rejected' }));
+  if (!moderationRulesBySubject[latestModerationAsset?.metadata?.[structuredMetadataField]]) {
+    if (passed) rows.push({ label: `${passed} other check${passed === 1 ? '' : 's'} approved`, state: 'approved' });
+    if (failed > reasons.length) {
+      const unlistedFailures = failed - reasons.length;
+      rows.push({ label: `${unlistedFailures} other check${unlistedFailures === 1 ? '' : 's'} failed`, state: 'rejected' });
+    }
+  }
+  if (!rows.length) rows.push({ label: 'Individual rule results unavailable', state: 'pending' });
+  renderModerationRows(rows);
 
   showcase.classList.remove('is-ready');
   void showcase.offsetWidth;
@@ -480,6 +633,7 @@ function showInspector() {
   $('#upload-prompt').hidden = true;
   $('#asset-inspector').hidden = false;
   selectedAsset = true;
+  activateLifecycleGlow();
   requestAnimationFrame(() => {
     syncEnrichVisual();
     syncTransformVisual();
@@ -487,10 +641,12 @@ function showInspector() {
     syncModerationVisual();
     syncOptimizeVisual();
     syncDeliverVisual();
+    syncOrchestrationStatus();
   });
 }
 
 function renderAssetData(asset) {
+  setAssetId(asset.asset_id || asset.assetId);
   const metadata = asset.metadata || {};
   const context = asset.context?.custom || asset.context || {};
   const output = {
@@ -543,7 +699,7 @@ async function pollAsset(assetReference, resourceType = 'image', attempt = 0, po
     const lookupId = lookup.assetId || lookup.publicId;
     const query = new URLSearchParams({ resourceType });
     if (lookup.assetId) query.set('assetId', lookup.assetId);
-    if (lookup.publicId) query.set('publicId', lookup.publicId);
+    else if (lookup.publicId) query.set('publicId', lookup.publicId);
     const endpoint = `${config.assetEndpoint}?${query.toString()}`;
 
     $('#metadata-output').textContent = JSON.stringify({
@@ -605,10 +761,10 @@ function handleUpload(info) {
   pollAsset(info.asset_id, info.resource_type || 'image', 0, pollingToken);
 }
 
-function openUploadWidget(assetType) {
-  const uploadPreset = uploadPresets[assetType];
+function openUploadWidget() {
+  const uploadPreset = uploadPresets.lifestyle;
   if (!uploadPreset) {
-    $('#note').textContent = 'That upload route is not configured yet.';
+    $('#note').textContent = 'The lifestyle upload preset is not configured yet.';
     return;
   }
   if (!window.cloudinary) {
@@ -616,7 +772,7 @@ function openUploadWidget(assetType) {
     return;
   }
 
-  if (!uploadWidgets.has(uploadPreset)) {
+  if (!uploadWidgets.has('upload')) {
     const sources = ['local', 'url', 'google_drive', 'onedrive', 'sharepoint', 'gettyimages'];
     if (config.dropboxAppKey) sources.splice(3, 0, 'dropbox');
 
@@ -632,10 +788,42 @@ function openUploadWidget(assetType) {
       resourceType: 'image',
       clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
       singleUploadAutoClose: true,
-      showAdvancedOptions: false
+      showAdvancedOptions: false,
+      prepareUploadParams: (callback, params) => {
+        requestAssetSubject().then((assetSubjectValue) => {
+          if (!assetSubjectValue) {
+            callback({ cancel: true });
+            return;
+          }
+          const requests = Array.isArray(params) ? params : [params];
+          const metadata = [`${structuredMetadataField}=${assetSubjectValue}`];
+          if (assetSubjectValue === productSubjectValue) {
+            metadata.push(`${structuredMetadataSkuField}=${structuredMetadataSkuValue}`);
+          }
+          const preparedMetadata = metadata.join('|');
+          const uploadTags = tagsForSubject(assetSubjectValue);
+          const preparedTags = uploadTags ? uploadTags.slice() : [];
+          debugUpload('prepared params', {
+            uploadPreset,
+            metadata: preparedMetadata,
+            tags: preparedTags
+          });
+          const prepared = requests.map((request) => ({
+            ...request,
+            metadata: preparedMetadata,
+            ...(uploadTags ? { tags: preparedTags.join(',') } : {})
+          }));
+          callback(Array.isArray(params) ? prepared : prepared[0]);
+        }).catch((error) => {
+          debugUpload('parameter preparation failed', error);
+          callback({ cancel: true });
+        });
+      }
     }, (error, result) => {
       if (error) {
-        $('#note').textContent = 'Upload failed. Check the upload preset configuration.';
+        debugUpload('error', error);
+        const detail = typeof error === 'string' ? error : error?.message;
+        $('#note').textContent = detail ? `Upload failed: ${detail}` : 'Upload failed. Check the upload preset configuration.';
         return;
       }
       const completedItem = result?.event === 'queues-end'
@@ -643,13 +831,32 @@ function openUploadWidget(assetType) {
         : null;
       const uploadInfo = result?.event === 'success' ? result.info : completedItem;
       if (uploadInfo) {
+        debugUpload('response', {
+          assetId: uploadInfo.asset_id,
+          tags: uploadInfo.tags || [],
+          metadata: uploadInfo.metadata || {}
+        });
         handleUpload(uploadInfo);
         uploadWidget.close({ quiet: true });
       }
     });
-    uploadWidgets.set(uploadPreset, uploadWidget);
+    uploadWidgets.set('upload', uploadWidget);
   }
-  uploadWidgets.get(uploadPreset).open();
+  uploadWidgets.get('upload').open();
+}
+
+function requestAssetSubject() {
+  return new Promise((resolve) => {
+    resolveAssetSubjectSelection = resolve;
+    openAssetTypeDialog();
+  });
+}
+
+function finishAssetSubjectSelection(value) {
+  const resolve = resolveAssetSubjectSelection;
+  resolveAssetSubjectSelection = undefined;
+  closeAssetTypeDialog();
+  resolve?.(value);
 }
 
 function openAssetTypeDialog() {
@@ -664,24 +871,21 @@ function closeAssetTypeDialog() {
   else dialog?.removeAttribute('open');
 }
 
-document.querySelectorAll('[data-asset-type]').forEach((option) => {
-  const isConfigured = Boolean(uploadPresets[option.dataset.assetType]);
-  option.disabled = !isConfigured;
-  if (isConfigured && option.dataset.assetType !== 'lifestyle') {
-    option.querySelector('[data-preset-state]').textContent = 'Ready to upload';
-  }
+document.querySelectorAll('[data-asset-subject]').forEach((option) => {
   option.onclick = () => {
-    if (!uploadPresets[option.dataset.assetType]) return;
-    closeAssetTypeDialog();
-    openUploadWidget(option.dataset.assetType);
+    finishAssetSubjectSelection(option.dataset.assetSubjectValue);
   };
 });
 
 $('#asset-type-dialog').addEventListener('click', (event) => {
-  if (event.target === event.currentTarget) closeAssetTypeDialog();
+  if (event.target === event.currentTarget) finishAssetSubjectSelection(null);
 });
 
-$('#upload').onclick = openAssetTypeDialog;
+$('#asset-type-dialog').addEventListener('close', () => {
+  if (resolveAssetSubjectSelection) finishAssetSubjectSelection(null);
+});
+
+$('#upload').onclick = () => openUploadWidget();
 document.querySelectorAll('[data-sample]').forEach((link) => {
   link.addEventListener('click', (event) => {
     event.preventDefault();
@@ -694,12 +898,12 @@ document.querySelectorAll('[data-sample]').forEach((link) => {
     setDemoState('SAMPLE ASSET');
     $('#metadata-output').textContent = JSON.stringify({
       assetLookup: 'pending',
-      assetId: sample.assetId,
+      assetId: sample.assetId || sample.publicId,
       message: 'Loading live Cloudinary asset data…'
     }, null, 2);
-    $('#note').textContent = 'Lifestyle campaign asset selected. Checking its live metadata.';
+    $('#note').textContent = `${sample.label || 'Sample asset'} selected. Checking its live metadata.`;
     go(ids.indexOf('ingest'));
-    pollAsset(sample.assetId, 'image', 0, pollingToken);
+    pollAsset(sample.assetId || { publicId: sample.publicId }, 'image', 0, pollingToken);
   }, true);
 });
 $('#file').onchange = (event) => {
@@ -710,15 +914,11 @@ $('#file').onchange = (event) => {
   setDemoState('LOCAL PREVIEW');
   $('#note').textContent = 'Configure an unsigned upload preset to send this file to Cloudinary.';
 };
-$('#change-asset').onclick = openAssetTypeDialog;
+$('#change-asset').onclick = () => openUploadWidget();
 $('#enrich-visual').onload = syncEnrichVisual;
 $('#transform-visual').onload = syncTransformVisual;
 addEventListener('message', (event) => {
   if (event.origin !== location.origin) return;
-  if (event.data?.type === 'enrich:resize') {
-    resizeEnrichVisual(event.data.width, event.data.height);
-    return;
-  }
   if (event.data?.type !== 'transform:loaded') return;
   syncTransformVisual();
 });
