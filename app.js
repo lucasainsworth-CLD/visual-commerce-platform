@@ -1,5 +1,5 @@
-const ids = ['intro', 'ingest', 'enrich', 'generate', 'transform', 'moderate', 'optimize', 'deliver', 'orchestrate'];
-const names = ['Intro', '1 Ingest', '2 Enrich', '3 Generate', '4 Transform', '5 Moderate', '6 Optimize', '7 Deliver', '8 Orchestrate'];
+const ids = ['intro', 'ingest', 'enrich', 'generate', 'transform', 'moderate', 'connect', 'optimize', 'deliver', 'orchestrate', 'usecases'];
+const names = ['Intro', '1 Ingest', '2 Enrich', '3 Generate', '4 Transform', '5 Moderate', '6 Connect', '7 Optimize', '8 Deliver', '9 Orchestrate', 'Use cases'];
 const config = window.LIFECYCLE_DEMO_CONFIG || {};
 const uploadPresets = config.uploadPresets || { lifestyle: config.uploadPreset };
 const structuredMetadataField = config.structuredMetadataField || 'asset_subject_';
@@ -50,6 +50,9 @@ let assetSource;
 let selectedAsset = false;
 let latestEnrichAsset;
 let latestModerationAsset;
+let latestTransformAsset;
+let generateDecision;
+let assetIsSample = false;
 let originalAssetBytes;
 let optimizeMeasurementRequest = 0;
 let deliverMeasurementRequest = 0;
@@ -180,13 +183,21 @@ function syncOrchestrationStatus() {
   if (empty) empty.hidden = selectedAsset;
   const diagram = $('#orchestrate-diagram');
   if (diagram) diagram.hidden = !selectedAsset;
+  const review = $('#orchestrate-review');
+  if (review) {
+    review.textContent = generateDecision === 'approved'
+      ? 'In this run the generated clip was approved, so the workflow continued to delivery.'
+      : generateDecision === 'rejected'
+        ? 'In this run the generated clip was rejected, so nothing was published.'
+        : 'In this demo, image-to-video is manually reviewed before publication.';
+  }
 }
 
 function beginAssetLifecycle() {
   assetPollingToken += 1;
-  ['ingest', 'enrich', 'generate', 'transform', 'moderate', 'optimize', 'deliver', 'orchestrate']
+  ['ingest', 'enrich', 'generate', 'transform', 'moderate', 'connect', 'optimize', 'deliver', 'orchestrate']
     .forEach((stage) => setLifecycleStatus(stage, 'processing'));
-  ['ingest', 'generate', 'transform'].forEach((stage) => {
+  ['ingest', 'generate', 'transform', 'connect'].forEach((stage) => {
     clearTimeout(lifecycleTimers.get(stage));
     lifecycleTimers.set(stage, setTimeout(() => {
       setLifecycleStatus(stage, 'ready');
@@ -211,7 +222,7 @@ function go(index) {
     document.querySelector(`a[href="#${id}"]`).classList.toggle('active', itemIndex === activeIndex);
   });
   const counter = $('#counter');
-  if (counter) counter.textContent = names[activeIndex] + ' of 8';
+  if (counter) counter.textContent = names[activeIndex] + ' of ' + (ids.length - 2);
   history.replaceState(null, '', '#' + ids[activeIndex]);
   requestAnimationFrame(() => {
     if (ids[activeIndex] === 'enrich') syncEnrichVisual();
@@ -255,17 +266,8 @@ function updateAsset(info) {
   $('#size').textContent = fileSize;
   const optimizeOriginalSize = $('#optimize-original-size');
   if (optimizeOriginalSize) optimizeOriginalSize.textContent = fileSize;
-  updateGenerateOriginal();
   updateOptimizeDelivery();
   updateDeliverVariants();
-}
-
-function updateGenerateOriginal() {
-  const image = $('#generate-original');
-  if (!image || !assetSource) return;
-  image.src = assetSource.includes('/image/upload/')
-    ? assetSource.replace('/image/upload/', '/image/upload/c_scale,w_300/f_auto/q_auto/')
-    : assetSource;
 }
 
 function updateOptimizeDelivery() {
@@ -476,19 +478,40 @@ function syncTransformVisual() {
   if (!frame?.contentWindow) return;
   frame.contentWindow.postMessage(
     selectedAsset
-      ? { type: 'transform:ready', imageUrl: assetSource }
+      ? {
+        type: 'transform:ready',
+        imageUrl: assetSource,
+        subject: latestTransformAsset?.metadata?.[structuredMetadataField]
+      }
       : { type: 'transform:empty' },
     location.origin
   );
 }
 
+function generateEndpoints() {
+  if (!config.assetEndpoint) return null;
+  const base = config.assetEndpoint.replace(/\/asset$/, '');
+  return { image: base + '/generate-image', video: base + '/generate-video' };
+}
+
 function syncGenerateVisual() {
-  const empty = $('#generate-empty');
-  const showcase = $('#generate-showcase');
-  if (!empty || !showcase) return;
-  empty.hidden = selectedAsset;
-  showcase.hidden = !selectedAsset;
-  setCanvasBusy('generate', selectedAsset && lifecycleStatus.generate === 'processing');
+  const frame = $('#generate-visual');
+  if (!frame?.contentWindow) return;
+  const endpoints = generateEndpoints();
+  const assetId = latestTransformAsset?.assetId;
+  frame.contentWindow.postMessage(
+    selectedAsset && assetId && endpoints
+      ? {
+        type: 'generate:ready',
+        imageUrl: assetSource,
+        assetId,
+        subject: latestTransformAsset?.metadata?.[structuredMetadataField],
+        isSample: assetIsSample,
+        endpoints
+      }
+      : { type: 'generate:empty' },
+    location.origin
+  );
 }
 
 function parseModerationSummary(value) {
@@ -679,8 +702,11 @@ function renderAssetData(asset) {
   }
   latestEnrichAsset = output;
   latestModerationAsset = output;
+  latestTransformAsset = { ...output, assetId: asset.asset_id || asset.assetId };
   if (isEnrichmentReady(output)) setLifecycleStatus('enrich', 'ready');
   syncEnrichVisual();
+  syncTransformVisual();
+  syncGenerateVisual();
   syncModerationVisual();
   syncOrchestrationStatus();
   return true;
@@ -748,6 +774,7 @@ async function pollAsset(assetReference, resourceType = 'image', attempt = 0, po
 
 function handleUpload(info) {
   const pollingToken = beginAssetLifecycle();
+  assetIsSample = false;
   updateAsset(info);
   showInspector();
   $('#metadata-output').textContent = JSON.stringify({
@@ -893,6 +920,7 @@ document.querySelectorAll('[data-sample]').forEach((link) => {
     const sample = sampleAssets[link.dataset.sample];
     if (!sample) return;
     const pollingToken = beginAssetLifecycle();
+    assetIsSample = true;
     updateAsset(sample);
     showInspector();
     setDemoState('SAMPLE ASSET');
@@ -917,10 +945,20 @@ $('#file').onchange = (event) => {
 $('#change-asset').onclick = () => openUploadWidget();
 $('#enrich-visual').onload = syncEnrichVisual;
 $('#transform-visual').onload = syncTransformVisual;
+$('#generate-visual').onload = syncGenerateVisual;
 addEventListener('message', (event) => {
   if (event.origin !== location.origin) return;
-  if (event.data?.type !== 'transform:loaded') return;
-  syncTransformVisual();
+  const type = event.data?.type;
+  if (type === 'transform:loaded') syncTransformVisual();
+  if (type === 'generate:loaded') syncGenerateVisual();
+  if (type === 'generate:upload') {
+    go(ids.indexOf('ingest'));
+    openUploadWidget();
+  }
+  if (type === 'generate:decision') {
+    generateDecision = event.data.decision;
+    syncOrchestrationStatus();
+  }
 });
 addEventListener('resize', () => {
   if (enrichImageSize) resizeEnrichVisual(enrichImageSize.width, enrichImageSize.height);

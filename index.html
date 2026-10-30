@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Connected Visual Media Lifecycle</title>
     <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/demohost/image/upload/v1788976605/Cld_Logomark_circle_dark.svg">
-    <link rel="stylesheet" href="styles.css?v=20261029-4">
+    <link rel="stylesheet" href="styles.css?v=20261030-12">
     <script>
       window.LIFECYCLE_DEMO_CONFIG = {
         cloudName: 'demohost',
@@ -23,7 +23,7 @@
       };
     </script>
     <script src="https://upload-widget.cloudinary.com/latest/global/all.js"></script>
-    <script src="app.js?v=20261029-39" defer></script>
+    <script src="app.js?v=20261030-4" defer></script>
   </head>
   <body>
     <div class="app">
@@ -57,15 +57,19 @@
         <div class="title">
           <img src="https://res.cloudinary.com/demohost/image/upload/v1788976604/cloudinary_logo_white_0720_svg.svg" alt="Cloudinary">
           <h1>Connected Visual Media Lifecycle</h1>
+          <nav class="title-links" aria-label="Sections outside the lifecycle">
+            <a class="active" href="#intro">INTRO</a>
+            <a href="#usecases">USE CASES</a>
+          </nav>
         </div>
         <nav aria-label="Lifecycle stages">
-          <a class="active" href="#intro">INTRO</a>
           <div class="lifecycle-flow" aria-label="Connected visual media lifecycle">
             <a href="#ingest"><span>INGEST</span></a><span class="flow-arrow" aria-hidden="true">→</span>
             <a href="#enrich"><span>ENRICH</span></a><span class="flow-arrow" aria-hidden="true">→</span>
             <a href="#generate"><span>GENERATE</span></a><span class="flow-arrow" aria-hidden="true">→</span>
             <a href="#transform"><span>TRANSFORM</span></a><span class="flow-arrow" aria-hidden="true">→</span>
             <a href="#moderate"><span>MODERATE</span></a><span class="flow-arrow" aria-hidden="true">→</span>
+            <a href="#connect"><span>CONNECT</span></a><span class="flow-arrow" aria-hidden="true">→</span>
             <a href="#optimize"><span>OPTIMIZE</span></a><span class="flow-arrow" aria-hidden="true">→</span>
             <a href="#deliver"><span>DELIVER</span></a><span class="flow-arrow" aria-hidden="true">→</span>
             <a href="#orchestrate"><span>ORCHESTRATE</span></a>
@@ -82,35 +86,70 @@
             <button data-next>See how →</button>
           </div>
           <div class="intro-outcomes" aria-label="Business outcomes">
-            <article>
-              <small>01</small>
-              <h3>Increase conversion</h3>
-              <p>Storefronts that sell.</p>
-              <nav aria-label="Conversion lifecycle steps"><span>LIFECYCLE STEPS</span><a href="#optimize">Optimize →</a><a href="#deliver">Deliver →</a></nav>
+            <article data-outcome="convert">
+              <header>
+                <span class="outcome-icon" aria-hidden="true"><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780362036/delivery-homepage-icon.svg" alt=""></span>
+                <h3>Convert more</h3>
+              </header>
+              <figure><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/c_scale,w_640/f_auto/q_auto/v1780376510/optimize-deliver-homepage_2x.png" alt="One product image delivered to a storefront and a mobile app, with format and size optimized for each"></figure>
+              <ul class="outcome-points">
+                <li><b>Richer storefronts</b><span>High-res images. Video. 360. 3D.</span></li>
+                <li><b>Dynamically personalized</b><span>By market, by user.</span></li>
+              </ul>
+              <p class="outcome-bottom"><i>&uarr;</i>&nbsp;Conversions &nbsp;<i>&darr;</i>&nbsp;Returns</p>
+              <a class="outcome-proof" href="https://cloudinary.com/customers/marks-and-spencer" target="_blank" rel="noopener noreferrer"><b>MARKS &amp; SPENCER</b><span><strong>0.5%</strong> more conversions after unlocking video</span></a>
             </article>
-            <article>
-              <small>02</small>
-              <h3>Launch faster</h3>
-              <p>From photoshoot to web, faster.</p>
-              <nav aria-label="Launch lifecycle steps"><span>LIFECYCLE STEPS</span><a href="#ingest">Ingest →</a><a href="#enrich">Enrich →</a><a href="#generate">Generate →</a><a href="#transform">Transform →</a><a href="#moderate">Moderate →</a></nav>
+            <article data-outcome="launch">
+              <header>
+                <span class="outcome-icon" aria-hidden="true"><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780362058/transform-generate-icon.svg" alt=""></span>
+                <h3>Launch faster</h3>
+              </header>
+              <figure><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/c_scale,w_640/f_auto/q_auto/v1784920487/media-intelligence-home_2x.png" alt="A single master asset rendered as a desktop storefront, a social post and a mobile app"></figure>
+              <ul class="outcome-points">
+                <li><b>One master asset</b><span>Every channel, campaign, setting.</span></li>
+                <li><b>One enriched library</b><span>B2C stores, B2B channels, AI agents.</span></li>
+              </ul>
+              <p class="outcome-bottom">Days&nbsp;<i>&rarr;</i>&nbsp;Seconds</p>
+              <a class="outcome-proof" href="https://cloudinary.com/customers/minted" target="_blank" rel="noopener noreferrer"><b>MINTED</b><span><strong>60M</strong> complex images generated automatically</span></a>
             </article>
-            <article>
-              <small>03</small>
-              <h3>Run leaner</h3>
-              <p>One platform. Less overhead.</p>
-              <nav aria-label="Efficiency lifecycle steps"><span>LIFECYCLE STEPS</span><a href="#moderate">Moderate →</a><a href="#orchestrate">Orchestrate →</a></nav>
+            <article data-outcome="lean">
+              <header>
+                <span class="outcome-icon" aria-hidden="true"><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780362032/automate-orchestrate-icon.svg" alt=""></span>
+                <h3>Run leaner</h3>
+              </header>
+              <figure><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/c_scale,w_640/f_auto/q_auto/v1780362108/moderate-align-homepage_2x.png" alt="Supplier and creator images automatically sorted into approved, rejected and needs-review"></figure>
+              <ul class="outcome-points">
+                <li><b>One automated media layer</b><span>Ingestion through delivery.</span></li>
+                <li><b>Brand-aligned AI</b><span>Moderation, image and video generation.</span></li>
+              </ul>
+              <p class="outcome-bottom">Fewer manual hours</p>
+              <a class="outcome-proof" href="https://cloudinary.com/customers/classpass" target="_blank" rel="noopener noreferrer"><b>CLASSPASS</b><span><strong>1.25M</strong> assets managed with no team expansion</span></a>
             </article>
           </div>
           <div class="intro-logos">
             <p>Trusted by leading commerce brands</p>
-            <ul>
-              <li><img src="https://res.cloudinary.com/cloudinary-marketing/images/f_auto,q_auto/v1729269621/puma-logoline/puma-logoline.png" alt="Puma" style="height: 34px"></li>
-              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269619/neiman-marcus-logoline.svg" alt="Neiman Marcus" style="height: 34px"></li>
-              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269617/AMC-logoline.svg" alt="AMC Theatres" style="height: 30px"></li>
-              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269399/manscaped-logoline.svg" alt="Manscaped" style="height: 22px"></li>
-              <li><img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1729269397/mintvelvet-logoline.svg" alt="Mint Velvet" style="height: 36px"></li>
-              <li><img src="https://res.cloudinary.com/cloudinary-marketing/images/f_auto,q_auto/v1729269618/guess-logoline/guess-logoline.png" alt="Guess" style="height: 18px"></li>
-            </ul>
+            <div class="logo-crawler">
+              <div class="logo-track">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780956719/adidas-logo-homepage-slider.svg" alt="adidas">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679008/paul-smith-logo-homepage-slider.svg" alt="Paul Smith">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679007/guess-logo-homepage.svg" alt="Guess">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679008/minted-logo-homepage.svg" alt="Minted">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679007/amc-logo-homepage.svg" alt="AMC Theatres">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679007/grubhub-logo-homepage-slider.svg" alt="Grubhub">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679008/marks-spencer-homepage-slider.svg" alt="Marks & Spencer">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780956718/hilton-logo-homepage-slider.svg" alt="Hilton">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780956720/mattel-logo-homepage-slider.svg" alt="Mattel">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780956719/adidas-logo-homepage-slider.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679008/paul-smith-logo-homepage-slider.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679007/guess-logo-homepage.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679008/minted-logo-homepage.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679007/amc-logo-homepage.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679007/grubhub-logo-homepage-slider.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780679008/marks-spencer-homepage-slider.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780956718/hilton-logo-homepage-slider.svg" alt="" aria-hidden="true">
+                <img src="https://cloudinary-marketing-res.cloudinary.com/image/upload/v1780956720/mattel-logo-homepage-slider.svg" alt="" aria-hidden="true">
+              </div>
+            </div>
           </div>
         </section>
 
@@ -177,13 +216,7 @@
               <a class="customer-proof is-metric" href="https://cloudinary.com/customers/paul-smith" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo is-wide" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1668465171/Paul-Smith-logo-2x/Paul-Smith-logo-2x.png" alt="Paul Smith"></b><span><strong class="proof-metric">45%</strong>boost in video-enabled sales</span></a>
             </aside>
           </div>
-          <div id="generate-empty" class="generate-empty"><b>Upload an asset to generate</b><span>Choose an asset to create campaign and motion variations.</span></div>
-          <div id="generate-showcase" class="generate-showcase" hidden>
-            <div id="generate-loader" class="canvas-loader" hidden role="status"><i></i><span>Creating visual variations…</span></div>
-            <figure class="generate-source"><img id="generate-original" src="https://res.cloudinary.com/demohost/image/upload/c_scale,w_300/f_auto/q_auto/v1787601621/utctndwrbavu4seggpqu.jpg" alt="Selected source asset"><figcaption>Original · 300px wide</figcaption></figure>
-            <figure><img src="https://res.cloudinary.com/demohost/image/upload/c_fill,g_auto,w_300,ar_9:16/f_auto/q_auto/v1790997552/gen_fill_bride.jpg" alt="Generative fill result"><figcaption>Generative fill · 9:16</figcaption></figure>
-            <figure><video autoplay muted loop playsinline aria-label="Image to video result"><source src="https://res.cloudinary.com/demohost/video/upload/c_fill,g_auto,w_300,ar_9:16/vc_auto/ac_none/f_auto:video/q_auto/v1790997654/image-to-video/i2v_66d2f0d4ef1d4b7b9302a3d8dbae1872.mp4" type="video/mp4"></video><figcaption>Image to video · 9:16</figcaption></figure>
-          </div>
+          <iframe id="generate-visual" class="generate-embed" src="embeds/generate-interactive.html?v=20261030-4" title="Generative examples and live generation"></iframe>
         </section>
 
         <section id="transform" class="slide">
@@ -196,7 +229,7 @@
               <a class="customer-proof is-metric" href="https://cloudinary.com/customers/amc" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1701708355/amc-logo-web/amc-logo-web.png" alt="AMC Theatres"></b><span><strong class="proof-metric">90%</strong>time saved with automated image transformations</span></a>
             </aside>
           </div>
-          <iframe id="transform-visual" class="transform-embed" src="embeds/transform-interactive.html?v=20261029-1" title="Interactive asset transformations"></iframe>
+          <iframe id="transform-visual" class="transform-embed" src="embeds/transform-interactive.html?v=20261030-7" title="Interactive asset transformations"></iframe>
         </section>
 
         <section id="moderate" class="slide">
@@ -230,9 +263,43 @@
           </div>
         </section>
 
+        <section id="connect" class="slide">
+          <div>
+            <p class="k">06 / CONNECT</p>
+            <h2>Fits the stack you already run.</h2>
+            <p>Pre-built connectors, APIs, and MCP endpoints plug Cloudinary into the AI tools, design systems, PIM, and commerce platforms your teams already use.</p>
+            <p class="value"><b>VALUE</b> No rip-and-replace. Teams keep working in the tools they know, and AI agents get a governed media layer to call.</p>
+            <aside class="customer-proofs" aria-label="Customer proof points">
+              <a class="customer-proof is-metric" href="https://cloudinary.com/customers/adidas" target="_blank" rel="noopener noreferrer"><b><img class="customer-logo" src="https://res.cloudinary.com/cloudinary-marketing/images/e_trim/f_auto,q_auto/v1740004299/Adidas_Logo/Adidas_Logo.png" alt="adidas"></b><span><strong class="proof-metric">100+</strong>partners fed by automated syndication</span></a>
+            </aside>
+          </div>
+          <div class="panel connect-frame">
+            <b>CONNECTED SYSTEMS / YOUR EXISTING STACK <i></i></b>
+            <div class="connect-grid">
+              <article class="connect-card">
+                <small>AI TOOLS</small>
+                <img src="assets/integrations/ai-tools.png" alt="Logos of connected AI tools and agent platforms">
+              </article>
+              <article class="connect-card">
+                <small>DESIGN / CMS</small>
+                <img src="assets/integrations/design-cms.png" alt="Logos of connected design and CMS platforms">
+              </article>
+              <article class="connect-card">
+                <small>PIM / MARKETING</small>
+                <img src="assets/integrations/pim-marketing.png" alt="Logos of connected PIM and marketing platforms">
+              </article>
+              <article class="connect-card">
+                <small>E-COMMERCE</small>
+                <img src="assets/integrations/ecommerce.png" alt="Logos of connected e-commerce platforms">
+              </article>
+            </div>
+            <p class="connect-footer"><b>75+</b> PRE-BUILT CONNECTORS &middot; APIs &middot; MCPs</p>
+          </div>
+        </section>
+
         <section id="optimize" class="slide">
           <div>
-            <p class="k">06 / OPTIMIZE</p>
+            <p class="k">07 / OPTIMIZE</p>
             <h2>Faster pages, more conversions.</h2>
             <p>Every image is served in the best format, quality, and size for each shopper's browser and device, so pages load faster with no visible quality loss.</p>
             <p class="value"><b>VALUE</b> Faster pages lift conversion and cut bandwidth costs.</p>
@@ -277,7 +344,7 @@
 
         <section id="deliver" class="slide">
           <div>
-            <p class="k">07 / DELIVER</p>
+            <p class="k">08 / DELIVER</p>
             <h2>Fast for every shopper, everywhere.</h2>
             <p>Multi-CDN delivery and responsive breakpoints give every shopper a fast, reliable experience on any device, network, or market.</p>
             <p class="value"><b>VALUE</b> Expand to new markets and devices without building a separate media pipeline.</p>
@@ -312,7 +379,7 @@
 
         <section id="orchestrate" class="slide">
           <div>
-            <p class="k">08 / ORCHESTRATE</p>
+            <p class="k">09 / ORCHESTRATE</p>
             <h2>Your media operation, on autopilot.</h2>
             <p>MediaFlows connects every step into one repeatable workflow, so the same team can handle more launches.</p>
             <p class="value"><b>VALUE</b> Fewer handoffs and faster launches, with people stepping in only where judgment is needed.</p>
@@ -346,10 +413,50 @@
                 <article class="orchestration-step">
                   <small>04 / GENERATE</small>
                   <strong>Generative output stays governed.</strong>
-                  <p>Generative content can be created automatically or manually. In this demo, image-to-video is manually reviewed before publication.</p>
+                  <p id="orchestrate-review">In this demo, image-to-video is manually reviewed before publication.</p>
                 </article>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="usecases" class="slide usecases-slide">
+          <div class="usecases-intro">
+            <p class="k">USE CASES</p>
+            <h2>One platform. Many use cases.</h2>
+            <p>Everything in the lifecycle serves more than one job. These are the programmes teams run on it.</p>
+          </div>
+          <div class="usecases-grid">
+            <article class="usecase" data-accent="display">
+              <small>01 &middot; DISPLAY</small>
+              <strong>Rich Visual Storefronts</strong>
+              <p>High res zoomable imagery, video (up to 4K), 360 spinset, 3D.</p>
+            </article>
+            <article class="usecase" data-accent="reach">
+              <small>02 &middot; REACH</small>
+              <strong>Omnichannel Readiness</strong>
+              <p>Every asset ready for web, social, marketplaces and apps.</p>
+            </article>
+            <article class="usecase" data-accent="speed">
+              <small>03 &middot; SPEED</small>
+              <strong>Content Velocity</strong>
+              <p>From photoshoot to live product page faster.</p>
+            </article>
+            <article class="usecase" data-accent="relevance">
+              <small>04 &middot; RELEVANCE</small>
+              <strong>Visual Personalization</strong>
+              <p>Dynamic imagery personalized per customer and market.</p>
+            </article>
+            <article class="usecase" data-accent="safety">
+              <small>05 &middot; SAFETY</small>
+              <strong>3rd Party &amp; UGC</strong>
+              <p>AI moderation, automated brand compliance, and normalization.</p>
+            </article>
+            <article class="usecase" data-accent="discovery">
+              <small>06 &middot; DISCOVERY</small>
+              <strong>AI Discovery Readiness</strong>
+              <p>Structured, well-tagged visuals AI assistants can understand.</p>
+            </article>
           </div>
         </section>
       </main>

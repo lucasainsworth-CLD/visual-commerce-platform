@@ -21,12 +21,25 @@
       .source { left: 50%; top: 50%; width: 300px; transform: translate(-50%, -50%); }
       .source img { display: block; width: 300px; max-height: 360px; border: 2px solid #64d8ee; border-radius: 8px; object-fit: cover; box-shadow: 0 10px 28px rgba(0,0,0,.38); }
       .source figcaption { margin-top: 7px; color: #d6eff5; font: 9px Inter, Arial, sans-serif; text-align: center; }
-      .variant { width: 90px; transform: translate(calc(-50% + var(--repel-x, 0px)), calc(-50% + var(--repel-y, 0px))) scale(var(--tile-scale, 1)); transform-origin: center; cursor: zoom-in; transition: transform 110ms ease-out, left .22s ease, top .22s ease, z-index 0s .18s; }
-      .variant img { display: block; width: 90px; max-height: 160px; border: 1px solid rgba(143,208,248,.72); border-radius: 5px; background: #0c223b; object-fit: cover; box-shadow: 0 6px 15px rgba(0,0,0,.3); transition: width .22s ease, max-height .22s ease, box-shadow .22s ease; }
+      .variant { width: 96px; transform: translate(calc(-50% + var(--repel-x, 0px)), calc(-50% + var(--repel-y, 0px))) scale(var(--tile-scale, 1)); transform-origin: center; cursor: pointer; transition: transform 180ms cubic-bezier(.2,.7,.3,1), left .24s ease, top .24s ease, z-index 0s .18s; }
+      .variant img { display: block; width: 96px; max-height: 170px; border: 1px solid rgba(143,208,248,.72); border-radius: 5px; background: #0c223b; object-fit: cover; box-shadow: 0 6px 15px rgba(0,0,0,.3); transition: width .22s ease, max-height .22s ease, box-shadow .22s ease; }
       .variant figcaption { position: absolute; top: calc(100% + 5px); left: 50%; display: block; width: max-content; max-width: 180px; transform: translateX(-50%); color: #eaf6ff; font: 9px Inter, Arial, sans-serif; white-space: nowrap; }
-      .variant.is-expanded { z-index: 10; cursor: zoom-out; transition-delay: 0s; }
+      .variant figcaption b { display: block; font-weight: 600; }
+      .variant figcaption code { display: none; margin-top: .35em; max-width: 34em; color: #93d3f5; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8em; line-height: 1.5; white-space: normal; word-break: break-word; }
+      .variant.is-expanded figcaption code { display: block; }
+      .variant.is-expanded { z-index: 10; transition-delay: 0s; }
+      .variant.is-pinned img { border-color: #62d5ee; box-shadow: 0 0 0 2px rgba(98,213,238,.5), 0 18px 48px rgba(0,0,0,.58); }
       .variant.is-expanded img { border-width: var(--expanded-border, 1px); box-shadow: 0 18px 48px rgba(0,0,0,.58); }
-      .variant.is-expanded figcaption { display: block; font-size: var(--expanded-caption-size, 9px); }
+      .variant.is-expanded figcaption { display: block; padding: .5em .7em; border-radius: .5em; background: rgba(4, 17, 33, .9); box-shadow: 0 .4em 1.2em rgba(0,0,0,.45); font-size: var(--expanded-caption-size, 9px); }
+      .stage.is-framed { cursor: zoom-out; }
+      .stage.is-framed .variant:not(.is-framed) { opacity: 0; pointer-events: none; }
+      .stage.is-framed .source, .stage.is-framed .leaders { opacity: 0; }
+      .source, .leaders { transition: opacity .2s ease; }
+      .variant:not(.is-framed) { opacity: 1; transition: transform 180ms cubic-bezier(.2,.7,.3,1), left .24s ease, top .24s ease, opacity .2s ease, z-index 0s .18s; }
+      .variant.is-framed { z-index: 20; left: 50%; top: 50%; width: auto; transform: translate(-50%, -50%); cursor: zoom-out; }
+      .variant.is-framed img { width: auto; max-height: none; border-width: 2px; border-color: #64d8ee; object-fit: contain; box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+      .variant.is-framed figcaption { position: static; display: block; width: auto; max-width: none; margin-top: 11px; padding: 0; transform: none; background: none; box-shadow: none; font-size: 13px; text-align: center; white-space: normal; }
+      .variant.is-framed figcaption code { display: block; margin-top: .4em; font-size: .72em; }
       .stage.empty .source, .stage.empty .variant, .stage.empty .leaders { display: none; }
       .stage.ready .empty { display: none; }
       .stage.loading .empty { display: none; }
@@ -49,30 +62,80 @@
       const leaders = document.querySelector('#leaders');
       let points = [];
       let currentSource;
+      let currentSubject;
       let expandedPoint;
+      let framedPoint;
+      const captionAllowance = 78;
+      const thumbWidth = 500;
+      const framedWidth = 1100;
 
-      // Replace or extend these descriptors as we define the final transformation story.
-      const transformations = [
-        { label: 'Square crop', value: 'c_fill,g_auto,w_300,ar_1:1/f_auto/q_auto' },
-        { label: 'Social portrait', value: 'c_fill,g_auto,w_300,ar_4:5/f_auto/q_auto' },
-        { label: 'Vertical story', value: 'c_fill,g_auto,w_300,ar_9:16/f_auto/q_auto' },
-        { label: 'Campaign banner', value: 'c_fill,g_auto,w_300,ar_16:9/f_auto/q_auto' },
-        { label: 'Marketplace', value: 'c_fill,g_auto,w_300,ar_3:2/f_auto/q_auto' },
-        { label: 'Wide display', value: 'c_fill,g_auto,w_300,ar_21:9/f_auto/q_auto' },
-        { label: 'Blurred background', value: 'c_pad,b_auto,w_300,ar_16:9/f_auto/q_auto' },
-        { label: 'Grayscale', value: 'e_grayscale/c_scale,w_300/f_auto/q_auto' },
-        { label: 'Sepia tone', value: 'e_sepia/c_scale,w_300/f_auto/q_auto' },
-        { label: 'Sharpened', value: 'e_sharpen/c_scale,w_300/f_auto/q_auto' },
-        { label: 'Smart crop', value: 'c_fill,g_auto,w_300,ar_1:1/f_auto/q_auto' },
-        { label: 'Color tint', value: 'co_rgb:334fc3,e_colorize:40/c_scale,w_300/f_auto/q_auto' },
-        { label: 'Image overlay', value: 'c_scale,w_700/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDczMTE4NS8xNV9vZmZfdmdpcGQ2LnBuZw/c_scale,fl_relative,w_0.44/fl_layer_apply,g_south_east,x_20,y_20/f_auto/q_auto' },
-        { label: 'Text overlay', value: 'c_scale,w_700/l_text:Montserrat@google_80_700:Cloudinary%20Media/e_outline:1,co_rgb:e5e7eb/c_scale,fl_relative,w_0.645/fl_layer_apply,g_south_west,x_40,y_40/f_auto/q_auto' },
-        { label: 'Watermark', value: 'c_scale,w_700/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDAwODIyMC9EcmFmdE92ZXJsYXlfbDFlMXZ2LnBuZw/c_scale,fl_relative,w_1.0/fl_layer_apply,g_center/f_auto/q_auto' }
-      ];
+      function reseed() {
+        const bounds = stage.getBoundingClientRect();
+        const centerX = bounds.width / 2;
+        const centerY = bounds.height / 2;
+        points.forEach((point, index) => {
+          const angle = (-90 + index * 360 / points.length) * Math.PI / 180;
+          point.baseX = centerX + Math.cos(angle) * bounds.width * .37;
+          point.baseY = centerY + Math.sin(angle) * bounds.height * .36;
+          if (!point.expanded) { point.x = point.baseX; point.y = point.baseY; }
+        });
+      }
 
-      function deliveryUrl(source, transformation) {
+      // One set per image category. The key is the `asset_subject_` structured-metadata value.
+      const transformationSets = {
+        'product_shot': [
+          { label: 'White packshot', value: 'e_background_removal/c_pad,b_white,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Catalog square', value: 'c_pad,b_auto,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Marketplace 3:2', value: 'c_pad,b_auto,ar_3:2,w_500/f_auto/q_auto' },
+          { label: 'Mobile PDP 4:5', value: 'c_pad,b_auto,ar_4:5,w_500/f_auto/q_auto' },
+          { label: 'Detail zoom', value: 'c_thumb,g_auto,z_1.4,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Generative expand', value: 'c_pad,ar_9:16,b_gen_fill,w_500/f_auto/q_auto' },
+          { label: 'Promo badge', value: 'c_fill,g_auto,ar_1:1,w_500/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDczMTE4NS8xNV9vZmZfdmdpcGQ2LnBuZw/c_scale,fl_relative,w_0.4/fl_layer_apply,g_south_east,x_18,y_18/f_auto/q_auto' },
+          { label: 'Offer banner', value: 'c_fill,g_auto,ar_16:9,w_500/l_text:Montserrat@google_70_700:NEW%20ARRIVAL/co_white,e_outline:2,co_rgb:00000055/c_scale,fl_relative,w_0.66/fl_layer_apply,g_south_west,x_26,y_26/f_auto/q_auto' },
+        ],
+        'lifestyle_shot': [
+          { label: 'Vertical story 9:16', value: 'c_fill,g_auto,ar_9:16,w_500/f_auto/q_auto' },
+          { label: 'Social portrait 4:5', value: 'c_fill,g_auto,ar_4:5,w_500/f_auto/q_auto' },
+          { label: 'Campaign banner', value: 'c_fill,g_auto,ar_16:9,w_500/f_auto/q_auto' },
+          { label: 'Square social', value: 'c_fill,g_auto,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Wide hero 21:9', value: 'c_fill,g_auto,ar_21:9,w_500/f_auto/q_auto' },
+          { label: 'Generative expand', value: 'c_pad,ar_16:9,b_gen_fill,w_500/f_auto/q_auto' },
+          { label: 'Campaign headline', value: 'c_fill,g_auto,ar_16:9,w_500/l_text:Montserrat@google_70_700:SPRING%20COLLECTION/co_white,e_outline:2,co_rgb:00000055/c_scale,fl_relative,w_0.66/fl_layer_apply,g_south_west,x_26,y_26/f_auto/q_auto' },
+          { label: 'Brand lockup', value: 'c_fill,g_auto,ar_4:5,w_500/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDczMTE4NS8xNV9vZmZfdmdpcGQ2LnBuZw/c_scale,fl_relative,w_0.4/fl_layer_apply,g_south_east,x_18,y_18/f_auto/q_auto' },
+        ],
+        'ugc___creator': [
+          { label: 'Face-aware square', value: 'c_fill,g_faces,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Review thumbnail', value: 'c_thumb,g_faces,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Vertical story 9:16', value: 'c_fill,g_auto,ar_9:16,w_500/f_auto/q_auto' },
+          { label: 'Creator feed 4:5', value: 'c_fill,g_faces,ar_4:5,w_500/f_auto/q_auto' },
+          { label: 'Normalized to brand', value: 'e_improve,e_auto_color/c_fill,g_auto,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Brand frame', value: 'c_pad,b_auto,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Rights watermark', value: 'c_fill,g_auto,ar_1:1,w_500/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDAwODIyMC9EcmFmdE92ZXJsYXlfbDFlMXZ2LnBuZw/c_scale,fl_relative,w_1.0/fl_layer_apply,g_center/f_auto/q_auto' },
+          { label: 'Creator credit', value: 'c_fill,g_faces,ar_4:5,w_500/l_text:Montserrat@google_70_700:CREATOR%20EDIT/co_white,e_outline:2,co_rgb:00000055/c_scale,fl_relative,w_0.66/fl_layer_apply,g_south_west,x_26,y_26/f_auto/q_auto' },
+        ],
+        'sqeyaugdmr39vxwznqxa': [
+          { label: 'Wide hero 21:9', value: 'c_fill,g_auto,ar_21:9,w_500/f_auto/q_auto' },
+          { label: 'Mobile hero 9:16', value: 'c_fill,g_auto,ar_9:16,w_500/f_auto/q_auto' },
+          { label: 'Listing card 4:3', value: 'c_fill,g_auto,ar_4:3,w_500/f_auto/q_auto' },
+          { label: 'Square social', value: 'c_fill,g_auto,ar_1:1,w_500/f_auto/q_auto' },
+          { label: 'Email banner 3:1', value: 'c_fill,g_auto,ar_3:1,w_500/f_auto/q_auto' },
+          { label: 'Generative expand', value: 'c_pad,ar_21:9,b_gen_fill,w_500/f_auto/q_auto' },
+          { label: 'Destination title', value: 'c_fill,g_auto,ar_16:9,w_500/l_text:Montserrat@google_70_700:BOOK%20DIRECT/co_white,e_outline:2,co_rgb:00000055/c_scale,fl_relative,w_0.66/fl_layer_apply,g_south_west,x_26,y_26/f_auto/q_auto' },
+          { label: 'Property lockup', value: 'c_fill,g_auto,ar_4:3,w_500/l_fetch:aHR0cHM6Ly9yZXMuY2xvdWRpbmFyeS5jb20vZHo2YWp3aDZrL2ltYWdlL3VwbG9hZC92MTc5MDczMTE4NS8xNV9vZmZfdmdpcGQ2LnBuZw/c_scale,fl_relative,w_0.4/fl_layer_apply,g_south_east,x_18,y_18/f_auto/q_auto' },
+        ],
+      };
+      const fallbackSubject = 'lifestyle_shot';
+      let transformations = transformationSets[fallbackSubject];
+
+      // Generative fill is non-deterministic, so every width is a separate generation.
+      // Pinning it to one width makes the thumbnail and the full-frame view the same image.
+      const generativeTransform = /b_gen_|e_gen_/;
+
+      function deliveryUrl(source, transformation, width = thumbWidth) {
         if (!source.includes('/image/upload/')) return source;
-        return source.replace('/image/upload/', `/image/upload/${transformation}/`);
+        const target = generativeTransform.test(transformation) ? framedWidth : width;
+        const sized = transformation.replace(/w_500/g, `w_${target}`);
+        return source.replace('/image/upload/', `/image/upload/${sized}/`);
       }
 
       function clamp(value, minimum, maximum) {
@@ -81,10 +144,10 @@
 
       function layoutVariants() {
         const bounds = stage.getBoundingClientRect();
-        const margin = 40;
+        const margin = 62;
         const centerX = bounds.width / 2;
         const centerY = bounds.height / 2;
-        const minimumDistance = 118;
+        const minimumDistance = 124;
 
         for (let pass = 0; pass < 22; pass += 1) {
           points.forEach((point) => {
@@ -99,7 +162,7 @@
               const dx = b.x - a.x;
               const dy = b.y - a.y;
               const distance = Math.max(1, Math.hypot(dx, dy));
-              const requiredDistance = a.expanded || b.expanded ? 185 : minimumDistance;
+              const requiredDistance = a.expanded || b.expanded ? 214 : minimumDistance;
               if (distance >= requiredDistance) continue;
               const push = (requiredDistance - distance) / 2;
               const unitX = dx / distance;
@@ -147,57 +210,27 @@
         point.gradient.setAttribute('y2', endY);
       }
 
-      function attractToPointer(event) {
-        const bounds = stage.getBoundingClientRect();
-        const pointerX = event ? event.clientX - bounds.left : bounds.width / 2;
-        const pointerY = event ? event.clientY - bounds.top : bounds.height / 2;
-        points.forEach((point) => {
-          const dx = pointerX - point.x;
-          const dy = pointerY - point.y;
-          const distance = Math.max(32, Math.hypot(dx, dy));
-          if (point.expanded) {
-            const magnitude = event ? Math.min(34, distance * .16) : 0;
-            point.repelX = (dx / distance) * magnitude;
-            point.repelY = (dy / distance) * magnitude;
-            const image = point.node.querySelector('img');
-            const halfWidth = 25 * point.scale;
-            const halfHeight = (image.offsetHeight / 2) * point.scale;
-            point.repelX = clamp(point.x + point.repelX, halfWidth + 14, bounds.width - halfWidth - 14) - point.x;
-            point.repelY = clamp(point.y + point.repelY, halfHeight + 14, bounds.height - halfHeight - 14) - point.y;
-          } else {
-            const influence = event ? Math.max(0, 1 - distance / 300) : 0;
-            const magnitude = 24 * influence * influence;
-            point.repelX = (dx / distance) * magnitude;
-            point.repelY = (dy / distance) * magnitude;
-          }
-          point.node.style.setProperty('--repel-x', `${point.repelX}px`);
-          point.node.style.setProperty('--repel-y', `${point.repelY}px`);
-          drawLeader(point);
-        });
-      }
-
-      function expand(point) {
+      function focusPoint(point) {
         const bounds = stage.getBoundingClientRect();
         if (point.expanded) return;
         const rect = point.node.getBoundingClientRect();
         const halfWidth = rect.width / 2;
         const halfHeight = rect.height / 2;
-        const scale = Math.max(1, Math.min(
-          300 / rect.width,
-          (bounds.width - 28) / rect.width,
-          (bounds.height - 28) / rect.height
-        ));
+        // Fit a target box rather than a fixed width, so landscape grows wide and portrait grows tall.
+        const maxWidth = Math.min(480, bounds.width - 70);
+        const maxHeight = Math.max(240, bounds.height - 90);
+        const scale = Math.max(1, Math.min(maxWidth / rect.width, maxHeight / rect.height));
         const expandedHalfWidth = halfWidth * scale;
         const expandedHalfHeight = halfHeight * scale;
         point.x = clamp(
-          point.x + (bounds.width / 2 - point.x) * .55,
+          point.x + (bounds.width / 2 - point.x) * .22,
           expandedHalfWidth + 14,
           bounds.width - expandedHalfWidth - 14
         );
         point.y = clamp(
-          point.y + (bounds.height / 2 - point.y) * .32,
+          point.y + (bounds.height / 2 - point.y) * .12,
           expandedHalfHeight + 14,
-          bounds.height - expandedHalfHeight - 14
+          bounds.height - expandedHalfHeight - captionAllowance
         );
         point.repelX = 0;
         point.repelY = 0;
@@ -215,7 +248,40 @@
         layoutVariants();
       }
 
-      function collapse(point) {
+      function framePoint(point) {
+        const bounds = stage.getBoundingClientRect();
+        if (expandedPoint && expandedPoint !== point) blurPoint(expandedPoint);
+        if (point.expanded) blurPoint(point);
+        expandedPoint = undefined;
+        framedPoint = point;
+        const image = point.node.querySelector('img');
+        // Swap in a larger rendition so the full-frame view is not an upscale of the thumbnail.
+        const framedSource = deliveryUrl(currentSource, point.value, framedWidth);
+        const preload = new Image();
+        preload.onload = () => { if (framedPoint === point) image.src = framedSource; };
+        preload.src = framedSource;
+        image.style.maxWidth = `${Math.round(bounds.width - 48)}px`;
+        image.style.maxHeight = `${Math.round(bounds.height - 86)}px`;
+        point.node.style.left = '50%';
+        point.node.style.top = '50%';
+        point.node.style.setProperty('--repel-x', '0px');
+        point.node.style.setProperty('--repel-y', '0px');
+        point.node.classList.add('is-framed');
+        stage.classList.add('is-framed');
+      }
+
+      function unframePoint(point) {
+        const image = point.node.querySelector('img');
+        image.style.removeProperty('max-width');
+        image.style.removeProperty('max-height');
+        image.src = deliveryUrl(currentSource, point.value, thumbWidth);
+        point.node.classList.remove('is-framed');
+        stage.classList.remove('is-framed');
+        framedPoint = undefined;
+        layoutVariants();
+      }
+
+      function blurPoint(point) {
         point.expanded = false;
         point.scale = 1;
         point.node.classList.remove('is-expanded');
@@ -239,15 +305,23 @@
         const centerY = bounds.height / 2;
         transformations.forEach((item, index) => {
           const angle = (-90 + index * 360 / transformations.length) * Math.PI / 180;
-          const baseX = centerX + Math.cos(angle) * bounds.width * .41;
-          const baseY = centerY + Math.sin(angle) * bounds.height * .39;
+          const baseX = centerX + Math.cos(angle) * bounds.width * .37;
+          const baseY = centerY + Math.sin(angle) * bounds.height * .36;
           const figure = document.createElement('figure');
           figure.className = 'variant';
           const image = document.createElement('img');
           image.src = deliveryUrl(source, item.value);
           image.alt = item.label;
           const caption = document.createElement('figcaption');
-          caption.textContent = item.label;
+          const captionLabel = document.createElement('b');
+          captionLabel.textContent = item.label;
+          const captionSyntax = document.createElement('code');
+          // Show the width actually requested, which differs for pinned generative transforms.
+          const shownValue = generativeTransform.test(item.value)
+            ? item.value.replace(/w_500/g, `w_${framedWidth}`)
+            : item.value;
+          captionSyntax.textContent = shownValue.replace(/\/f_auto\/q_auto$/, '').replace(/l_fetch:[A-Za-z0-9_-]+/, 'l_fetch:\u2026');
+          caption.append(captionLabel, captionSyntax);
           figure.append(image, caption);
           variants.append(figure);
           const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
@@ -266,17 +340,24 @@
           const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           line.setAttribute('stroke', `url(#transform-leader-${index})`);
           leaders.append(line);
-          const point = { node: figure, line, gradient, x: baseX, y: baseY, baseX, baseY, expanded: false, scale: 1, repelX: 0, repelY: 0 };
+          const point = { node: figure, line, gradient, value: item.value, x: baseX, y: baseY, baseX, baseY, expanded: false, scale: 1, repelX: 0, repelY: 0 };
+          figure.addEventListener('pointerenter', () => {
+            if (framedPoint) return;
+            if (expandedPoint && expandedPoint !== point) blurPoint(expandedPoint);
+            focusPoint(point);
+            expandedPoint = point;
+          });
+          figure.addEventListener('pointerleave', () => {
+            if (framedPoint || expandedPoint !== point) return;
+            blurPoint(point);
+            expandedPoint = undefined;
+          });
+          // Click opens the tile full-frame, uncropped; clicking again reverts.
           figure.addEventListener('click', (event) => {
             event.stopPropagation();
-            if (expandedPoint === point) {
-              collapse(point);
-              expandedPoint = undefined;
-              return;
-            }
-            if (expandedPoint) collapse(expandedPoint);
-            expand(point);
-            expandedPoint = point;
+            if (framedPoint === point) { unframePoint(point); return; }
+            if (framedPoint) unframePoint(framedPoint);
+            framePoint(point);
           });
           points.push(point);
         });
@@ -285,22 +366,30 @@
       }
 
       addEventListener('resize', layoutVariants);
-      stage.addEventListener('pointermove', attractToPointer);
-      stage.addEventListener('pointerleave', () => attractToPointer());
       stage.addEventListener('click', () => {
+        if (framedPoint) { unframePoint(framedPoint); return; }
         if (!expandedPoint) return;
-        collapse(expandedPoint);
+        blurPoint(expandedPoint);
         expandedPoint = undefined;
       });
+      addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && framedPoint) unframePoint(framedPoint);
+      });
       new ResizeObserver(() => {
-        if (currentSource && stage.clientWidth && stage.clientHeight) render(currentSource);
+        if (!currentSource || !stage.clientWidth || !stage.clientHeight) return;
+        if (points.length) { reseed(); layoutVariants(); return; }
+        render(currentSource);
       }).observe(stage);
 
       addEventListener('message', (event) => {
         if (event.origin !== location.origin) return;
         if (event.data?.type === 'transform:empty') stage.className = 'stage empty';
         if (event.data?.type === 'transform:loading') stage.className = 'stage loading';
-        if (event.data?.type === 'transform:ready') render(event.data.imageUrl);
+        if (event.data?.type === 'transform:ready') {
+          currentSubject = event.data.subject;
+          transformations = transformationSets[currentSubject] || transformationSets[fallbackSubject];
+          render(event.data.imageUrl);
+        }
       });
       parent.postMessage({ type: 'transform:loaded' }, location.origin);
     </script>

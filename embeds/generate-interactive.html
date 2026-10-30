@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Generative examples</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; color: #eaf6ff; font-family: Inter, Arial, sans-serif; }
+      .stage { position: relative; width: 100%; height: 100%; overflow: hidden; border: 1px solid rgba(117,184,255,.22); border-radius: 12px; background: radial-gradient(circle at 50% 18%, #16305a 0, #081b33 48%, #06172c 80%); }
+      .stage::before { content: ''; position: absolute; inset: 0; opacity: .32; background-image: linear-gradient(rgba(112,150,209,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(112,150,209,.1) 1px, transparent 1px); background-size: 34px 34px; }
+
+      .empty { position: absolute; z-index: 6; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; }
+      .empty b { color: #fff; font-size: 16px; }
+      .empty span { max-width: 240px; color: #8198b7; font-size: 11px; line-height: 1.5; }
+      .stage.ready .empty { display: none; }
+
+      .deck { position: absolute; inset: 0; perspective: 1500px; }
+      .stage:not(.ready) .deck, .stage:not(.ready) .deck-nav { display: none; }
+      .card { position: absolute; top: 50%; left: 50%; width: 430px; padding: 14px 14px 12px; border: 1px solid rgba(143,208,248,.3); border-radius: 13px; background: linear-gradient(165deg, #10294c, #08182e); box-shadow: 0 18px 46px rgba(0,0,0,.5); cursor: pointer; transition: transform .52s cubic-bezier(.2,.7,.3,1), opacity .38s ease, border-color .25s ease; }
+      .card.is-live { border-color: rgba(98,213,238,.6); box-shadow: 0 18px 46px rgba(0,0,0,.5), 0 0 0 1px rgba(98,213,238,.22); }
+      .card.is-active { cursor: default; }
+      .card-media { position: relative; display: grid; height: 302px; place-items: center; overflow: hidden; border-radius: 8px; background: #061427; }
+      .card-media img, .card-media video { width: 100%; height: 100%; object-fit: cover; }
+      .card-source { position: absolute; right: 9px; bottom: 9px; width: 74px; height: 74px; overflow: hidden; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+      .card-source img { object-fit: cover; }
+      .card-source small { position: absolute; top: 0; left: 0; padding: 1px 4px; background: rgba(4,17,33,.82); color: #cfe6f7; font: 7px monospace; letter-spacing: .08em; }
+      .card h3 { margin: 12px 0 4px; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+      .card p { margin: 0; color: #9db3cd; font-size: 12px; line-height: 1.5; }
+      .badge { display: inline-block; margin-bottom: 7px; padding: 2px 7px; border-radius: 4px; background: rgba(98,213,238,.16); color: #62d5ee; font: 8px monospace; letter-spacing: .13em; }
+      .badge.is-video { background: rgba(169,123,255,.18); color: #c3a2ff; }
+      .badge.is-live { background: rgba(88,221,161,.18); color: #58dda1; }
+
+      .deck-nav { position: absolute; z-index: 7; bottom: 12px; left: 50%; display: flex; align-items: center; gap: 9px; transform: translateX(-50%); }
+      .deck-nav button { display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid rgba(143,208,248,.3); border-radius: 50%; background: rgba(8,24,46,.8); color: #cfe6f7; cursor: pointer; font-size: 12px; line-height: 1; }
+      .deck-nav button:hover { border-color: #62d5ee; color: #fff; }
+      .dots { display: flex; gap: 6px; }
+      .dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(143,208,248,.34); transition: background .2s ease, transform .2s ease; }
+      .dots i.on { background: #62d5ee; transform: scale(1.35); }
+
+      .live-body { display: grid; align-content: center; justify-items: center; gap: 11px; height: 302px; padding: 18px; text-align: center; }
+      .live-body b { color: #fff; font-size: 15px; }
+      .live-body span { max-width: 300px; color: #90a8c4; font-size: 12px; line-height: 1.55; }
+      .live-cta { padding: 9px 17px; border: 0; border-radius: 7px; background: #334fc3; color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; }
+      .live-cta:hover { background: #4461dd; }
+      .live-cta:disabled { background: #27365f; cursor: default; }
+      .live-secondary { border: 0; background: none; color: #62d5ee; cursor: pointer; font-size: 11.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+      .live-secondary:hover { color: #9fe8f7; }
+      .spinner { width: 22px; height: 22px; border: 2px solid rgba(98,213,238,.25); border-top-color: #62d5ee; border-radius: 50%; animation: spin .8s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .lanes { display: grid; gap: 6px; width: 100%; max-width: 300px; }
+      .lane { display: flex; align-items: center; justify-content: space-between; padding: 6px 11px; border-radius: 6px; background: rgba(8,24,46,.72); font-size: 11.5px; }
+      .lane i { font-style: normal; color: #8fa6c2; }
+      .lane.done i { color: #58dda1; }
+      .lane.failed i { color: #ff765d; }
+
+      .review { display: grid; gap: 8px; justify-items: center; }
+      .review-note { max-width: 320px; color: #ffc24d; font-size: 11px; line-height: 1.5; }
+      .review-actions { display: flex; gap: 7px; }
+      .review-actions button { padding: 7px 16px; border: 1px solid; border-radius: 6px; background: transparent; cursor: pointer; font-size: 12.5px; font-weight: 600; }
+      .approve { border-color: rgba(88,221,161,.6); color: #58dda1; }
+      .approve:hover { background: rgba(88,221,161,.14); }
+      .reject { border-color: rgba(255,118,93,.55); color: #ff765d; }
+      .reject:hover { background: rgba(255,118,93,.13); }
+      .verdict { font-size: 12px; font-weight: 600; }
+      .verdict.approved { color: #58dda1; }
+      .verdict.rejected { color: #ff765d; }
+      .blocked-mark { font-size: 20px; }
+    </style>
+  </head>
+  <body>
+    <main id="stage" class="stage">
+      <div class="empty"><b>Upload an asset to generate</b><span>Browse generative examples, then run one live on the selected image.</span></div>
+      <div class="deck" id="deck"></div>
+      <nav class="deck-nav" aria-label="Browse examples">
+        <button type="button" id="prev" aria-label="Previous example">&#8249;</button>
+        <span class="dots" id="dots" aria-hidden="true"></span>
+        <button type="button" id="next" aria-label="Next example">&#8250;</button>
+      </nav>
+    </main>
+    <script src="generate-interactive.js?v=4"></script>
+  </body>
+</html>
