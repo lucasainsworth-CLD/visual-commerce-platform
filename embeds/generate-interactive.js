@@ -46,11 +46,34 @@ let endpoints = null;   // { image, video }
 let live = { state: 'idle' };
 let pollTimer;
 
+// The stage adopts Enrich's height, so the cards scale into whatever room there is
+// rather than sitting at a fixed size with dead space around them.
+function sizeDeck() {
+  const stageWidth = stage.clientWidth || 640;
+  const stageHeight = stage.clientHeight || 540;
+  // Reserve room for the deck controls and the card's own text block.
+  // Width is capped so the neighbouring cards still peek; height is then capped against
+  // that width, otherwise a tall stage makes a narrow card that crops landscape results.
+  const cardWidth = Math.round(Math.max(380, Math.min(stageWidth * 0.72, 620)));
+  const mediaHeight = Math.round(Math.max(250, Math.min(stageHeight - 190, cardWidth * 1.1, 560)));
+  deck.style.setProperty('--media-h', `${mediaHeight}px`);
+  deck.style.setProperty('--card-w', `${cardWidth}px`);
+  return { cardWidth };
+}
+
 function layout() {
+  const { cardWidth } = sizeDeck();
+  const step = Math.round(cardWidth * 0.54);
   cards.forEach((card, index) => {
     const offset = index - active;
     const depth = offset === 0 ? 0 : -260 - (Math.abs(offset) - 1) * 80;
-    card.style.transform = `translate(-50%, -50%) translateX(${offset * 232}px) translateZ(${depth}px) rotateY(${offset * -28}deg) scale(${offset === 0 ? 1 : 0.8})`;
+    // The live card is where the prospect actually works, so it takes the whole
+    // frame instead of sitting at example size with the deck showing around it.
+    const full = offset === 0 && card.classList.contains('is-live');
+    card.classList.toggle('is-full', full);
+    card.style.transform = full
+      ? 'none'
+      : `translate(-50%, -50%) translateX(${offset * step}px) translateZ(${depth}px) rotateY(${offset * -28}deg) scale(${offset === 0 ? 1 : 0.8})`;
     card.style.opacity = Math.abs(offset) > 2 ? '0' : String(1 - Math.abs(offset) * 0.22);
     card.style.zIndex = String(50 - Math.abs(offset));
     card.classList.toggle('is-active', offset === 0);
@@ -85,6 +108,56 @@ function liveCard() {
   card.className = 'card is-live';
   card.id = 'live-card';
   return card;
+}
+
+
+// The parent hands over the full-resolution delivery URL; a 74px inset only needs
+// a thumbnail of it.
+function sourceThumb(url) {
+  if (typeof url !== 'string' || !url.includes('/image/upload/')) return url;
+  return url.replace('/image/upload/', '/image/upload/c_fill,g_auto,w_180/f_auto/q_auto/');
+}
+
+// Entitlement and policy refusals come back as raw API strings. Keep them truthful
+// but readable: this is read out in front of a prospect.
+function reasonText(raw) {
+  const text = String(raw || '').trim().replace(/^action not permitted:\s*/i, '');
+  if (/subscription required/i.test(text)) return 'The Image to Video add-on is not enabled on this cloud.';
+  if (text === 'network') return 'The generation service could not be reached.';
+  if (text === 'failed') return 'The generation service rejected the request.';
+  return text;
+}
+
+// Reasons come back from the generation API, so they are escaped before display.
+function escapeText(value) {
+  const text = String(value).trim();
+  const node = document.createElement('span');
+  node.textContent = text.charAt(0).toUpperCase() + text.slice(1);
+  return node.innerHTML;
+}
+
+// Both lanes produce output, so show both — and keep them visible after a decision
+// rather than replacing the result with a status message.
+function resultsMarkup() {
+  const panes = [];
+  const failed = (label, reason) => `<figure class="result is-failed">
+      <span><b>Not generated</b>${reason ? `<i>${escapeText(reasonText(reason))}</i>` : ''}</span>
+      <figcaption>${label}</figcaption>
+    </figure>`;
+
+  if (live.image) {
+    panes.push(`<figure class="result"><img src="${live.image}" alt="Generated scene"><figcaption>New scene</figcaption></figure>`);
+  } else if (live.imageError) {
+    panes.push(failed('New scene', live.imageError));
+  }
+  if (live.video) {
+    panes.push(`<figure class="result"><video autoplay muted loop playsinline><source src="${live.video}" type="video/mp4"></video><figcaption>Four-second clip</figcaption></figure>`);
+  } else if (live.videoError) {
+    panes.push(failed('Four-second clip', live.videoError));
+  }
+  return `<div class="results" data-panes="${panes.length}">${panes.join('')}
+      <span class="card-source"><img src="${sourceThumb(asset.imageUrl)}" alt="Your source image"><small>SOURCE</small></span>
+    </div>`;
 }
 
 function renderLive() {
@@ -124,12 +197,7 @@ function renderLive() {
       <span>Output is held for review before anything is published.</span>
     </div>`;
   } else if (s === 'review') {
-    const media = live.video
-      ? `<video autoplay muted loop playsinline><source src="${live.video}" type="video/mp4"></video>`
-      : `<img src="${live.image}" alt="Generated result">`;
-    body = `<div class="card-media">${media}
-        <span class="card-source"><img src="${asset.imageUrl}" alt="Your source image"><small>SOURCE</small></span>
-      </div>
+    body = `${resultsMarkup()}
       <div class="review">
         <span class="badge is-live">AWAITING APPROVAL</span>
         <p class="review-note">Generative output can drift from the original. A human approves before this reaches a storefront.</p>
@@ -139,13 +207,14 @@ function renderLive() {
         </div>
       </div>`;
   } else if (s === 'approved' || s === 'rejected') {
-    body = `<div class="live-body">
-      <span class="verdict ${s}">${s === 'approved' ? 'Approved for publication' : 'Rejected and sent back'}</span>
-      <span>${s === 'approved'
-        ? 'MediaFlows continues the workflow: the asset is tagged, optimized and delivered to every channel.'
-        : 'Nothing is published. The request returns to the queue for a new generation.'}</span>
-      <button type="button" class="live-cta" id="live-reset">Run it again</button>
-    </div>`;
+    body = `${resultsMarkup()}
+      <div class="review">
+        <span class="verdict ${s}">${s === 'approved' ? '\u2713 Approved for publication' : '\u2715 Rejected and sent back'}</span>
+        <p class="review-note is-${s}">${s === 'approved'
+          ? 'MediaFlows continues the workflow: tagged, optimized and delivered to every channel.'
+          : 'Nothing is published. The request returns to the queue for a new generation.'}</p>
+        <button type="button" class="live-cta is-quiet" id="live-reset">Run it again</button>
+      </div>`;
   } else if (s === 'error') {
     body = `<div class="live-body">
       <span class="blocked-mark" aria-hidden="true">&#9888;</span>
@@ -156,9 +225,12 @@ function renderLive() {
   }
 
   card.innerHTML = `${body}
-    ${s === 'review' ? '' : `<span class="badge is-live">LIVE &middot; ${asset?.isSample ? 'SAMPLE ASSET' : 'YOUR IMAGE'}</span>
+    ${['review', 'approved', 'rejected'].includes(s) ? '' : `<span class="badge is-live">LIVE &middot; ${asset?.isSample ? 'SAMPLE ASSET' : 'YOUR IMAGE'}</span>
     <h3>${asset?.isSample ? 'Generate on a sample, or your own' : 'Generate on the selected asset'}</h3>
     <p>The same two add-ons that produced every example in this deck.</p>`}`;
+
+  card.classList.toggle('is-approved', s === 'approved');
+  card.classList.toggle('is-rejected', s === 'rejected');
 
   const run = card.querySelector('#live-run');
   if (run) run.addEventListener('click', (event) => { event.stopPropagation(); startGeneration(); });
@@ -205,6 +277,8 @@ async function startGeneration() {
     body: JSON.stringify({ assetId: asset.assetId, category: asset.subject })
   }).then((response) => response.json()).then((payload) => {
     if (payload.blocked) { live = { state: 'blocked', reason: payload.reason }; renderLive(); return; }
+    // A sample resolves to a clip the Worker already holds, so there is nothing to poll.
+    if (payload.video?.url) { live.video = payload.video.url; settle(); return; }
     if (payload.job?.id) pollVideo(payload.job.id, Date.now());
     else { live.videoError = payload.details || payload.error || 'failed'; settle(); }
   }).catch(() => { live.videoError = 'network'; settle(); });
@@ -261,6 +335,7 @@ function build() {
 
 document.querySelector('#prev').addEventListener('click', () => go(active - 1));
 document.querySelector('#next').addEventListener('click', () => go(active + 1));
+new ResizeObserver(() => layout()).observe(stage);
 addEventListener('keydown', (event) => {
   if (event.key === 'ArrowLeft') go(active - 1);
   if (event.key === 'ArrowRight') go(active + 1);

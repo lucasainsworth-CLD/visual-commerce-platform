@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Connected systems</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; color: #eaf6ff; font-family: Inter, Arial, sans-serif; }
+      .stage { position: relative; display: grid; width: 100%; height: 100%; grid-template-rows: auto 1fr auto; overflow: hidden; border: 1px solid rgba(185,212,255,.16); border-radius: 15px; background: #0b1220; }
+      .stage > b { display: flex; justify-content: space-between; padding: 15px 17px; border-bottom: 1px solid rgba(185,212,255,.16); color: #aebed2; font: 10px monospace; letter-spacing: .12em; }
+      .grid { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 22px; overflow: hidden; background-image: linear-gradient(#7096d115 1px, transparent 1px), linear-gradient(90deg, #7096d115 1px, transparent 1px); background-size: 34px 34px; }
+      footer { padding: 15px 17px; border-top: 1px solid rgba(185,212,255,.16); color: #aebed2; font: 10px monospace; letter-spacing: .12em; text-align: center; }
+      footer b { margin-right: 4px; color: #58dda1; font-size: 13px; }
+
+      .card { position: relative; display: grid; grid-template-rows: auto 1fr; gap: 10px; padding: 16px 14px 14px; border: 1px solid transparent; border-radius: 12px; background: #e1edff; cursor: pointer; overflow: visible; transition: border-color .22s ease, box-shadow .22s ease; }
+      .card-label { color: #1d3c6b; font-size: 11px; font-weight: 700; letter-spacing: .11em; text-align: center; text-decoration: none; }
+      .card-label:hover { text-decoration: underline; text-underline-offset: 3px; }
+      .card-label:focus-visible { outline: 2px solid #334fc3; outline-offset: 3px; border-radius: 4px; }
+      .card.is-open { z-index: 12; border-color: rgba(98,213,238,.85); box-shadow: 0 0 0 1px rgba(98,213,238,.3), 0 20px 48px rgba(0,0,0,.45); }
+
+      /* At rest the logos sit in a tidy cluster; on hover they fan out and become links. */
+      .fan { position: relative; }
+      .logo { position: absolute; display: grid; width: var(--chip); height: var(--chip); place-items: center; border-radius: 12px; background: #e1edff; transform: translate(-50%, -50%); transition: left .42s cubic-bezier(.22,.8,.3,1), top .42s cubic-bezier(.22,.8,.3,1), width .32s ease, height .32s ease, box-shadow .2s ease; }
+      .logo img { max-width: 74%; max-height: 74%; pointer-events: none; }
+      a.logo { cursor: pointer; text-decoration: none; }
+      a.logo:hover { z-index: 3; box-shadow: 0 0 0 2px #62d5ee, 0 10px 22px rgba(0,0,0,.3); }
+      a.logo:focus-visible { outline: 2px solid #62d5ee; outline-offset: 2px; }
+      .logo .tip { position: absolute; bottom: calc(100% + 6px); left: 50%; padding: 3px 7px; border-radius: 5px; background: #041121; color: #eaf6ff; font-size: 10px; white-space: nowrap; opacity: 0; transform: translateX(-50%); transition: opacity .16s ease; pointer-events: none; }
+      a.logo:hover .tip, a.logo:focus-visible .tip { opacity: 1; }
+      .card.is-open .logo { box-shadow: 0 10px 26px rgba(0,0,0,.35); }
+
+      .card.is-open
+      @media (prefers-reduced-motion: reduce) { .logo { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <main class="stage">
+      <b>CONNECTED SYSTEMS / YOUR EXISTING STACK <i></i></b>
+      <div class="grid" id="grid"></div>
+      <footer><b>75+</b> PRE-BUILT CONNECTORS &middot; APIs &middot; MCPs</footer>
+    </main>
+    <script src="connect-interactive.js?v=8"></script>
+  </body>
+</html>

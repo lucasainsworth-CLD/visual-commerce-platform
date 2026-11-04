@@ -17,13 +17,13 @@
 
       .deck { position: absolute; inset: 0; perspective: 1500px; }
       .stage:not(.ready) .deck, .stage:not(.ready) .deck-nav { display: none; }
-      .card { position: absolute; top: 50%; left: 50%; width: 430px; padding: 14px 14px 12px; border: 1px solid rgba(143,208,248,.3); border-radius: 13px; background: linear-gradient(165deg, #10294c, #08182e); box-shadow: 0 18px 46px rgba(0,0,0,.5); cursor: pointer; transition: transform .52s cubic-bezier(.2,.7,.3,1), opacity .38s ease, border-color .25s ease; }
+      .card { position: absolute; top: 50%; left: 50%; width: var(--card-w, 430px); padding: 14px 14px 12px; border: 1px solid rgba(143,208,248,.3); border-radius: 13px; background: linear-gradient(165deg, #10294c, #08182e); box-shadow: 0 18px 46px rgba(0,0,0,.5); cursor: pointer; transition: transform .52s cubic-bezier(.2,.7,.3,1), opacity .38s ease, border-color .25s ease; }
       .card.is-live { border-color: rgba(98,213,238,.6); box-shadow: 0 18px 46px rgba(0,0,0,.5), 0 0 0 1px rgba(98,213,238,.22); }
       .card.is-active { cursor: default; }
-      .card-media { position: relative; display: grid; height: 302px; place-items: center; overflow: hidden; border-radius: 8px; background: #061427; }
+      .card-media { position: relative; display: grid; height: var(--media-h, 302px); place-items: center; overflow: hidden; border-radius: 8px; background: #061427; }
       .card-media img, .card-media video { width: 100%; height: 100%; object-fit: cover; }
       .card-source { position: absolute; right: 9px; bottom: 9px; width: 74px; height: 74px; overflow: hidden; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
-      .card-source img { object-fit: cover; }
+      .card-source img { width: 100%; height: 100%; object-fit: cover; }
       .card-source small { position: absolute; top: 0; left: 0; padding: 1px 4px; background: rgba(4,17,33,.82); color: #cfe6f7; font: 7px monospace; letter-spacing: .08em; }
       .card h3 { margin: 12px 0 4px; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
       .card p { margin: 0; color: #9db3cd; font-size: 12px; line-height: 1.5; }
@@ -31,14 +31,22 @@
       .badge.is-video { background: rgba(169,123,255,.18); color: #c3a2ff; }
       .badge.is-live { background: rgba(88,221,161,.18); color: #58dda1; }
 
-      .deck-nav { position: absolute; z-index: 7; bottom: 12px; left: 50%; display: flex; align-items: center; gap: 9px; transform: translateX(-50%); }
+      /* The live card fills the frame: it is the one the prospect works in. */
+      .card.is-full { top: 0; left: 0; display: flex; width: 100%; height: 100%; flex-direction: column; padding: 16px 16px 50px; border-radius: 12px; }
+      .card.is-full > :first-child { min-height: 0; flex: 1; }
+      .card.is-full .live-body, .card.is-full .results { height: auto; }
+      .card.is-full .live-body span { max-width: 420px; }
+      .card.is-full > .badge { align-self: flex-start; }
+      .card.is-full h3 { margin-top: 14px; }
+
+      .deck-nav { position: absolute; z-index: 60; bottom: 12px; left: 50%; display: flex; align-items: center; gap: 9px; transform: translateX(-50%); }
       .deck-nav button { display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid rgba(143,208,248,.3); border-radius: 50%; background: rgba(8,24,46,.8); color: #cfe6f7; cursor: pointer; font-size: 12px; line-height: 1; }
       .deck-nav button:hover { border-color: #62d5ee; color: #fff; }
       .dots { display: flex; gap: 6px; }
       .dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(143,208,248,.34); transition: background .2s ease, transform .2s ease; }
       .dots i.on { background: #62d5ee; transform: scale(1.35); }
 
-      .live-body { display: grid; align-content: center; justify-items: center; gap: 11px; height: 302px; padding: 18px; text-align: center; }
+      .live-body { display: grid; align-content: center; justify-items: center; gap: 11px; height: var(--media-h, 302px); padding: 18px; text-align: center; }
       .live-body b { color: #fff; font-size: 15px; }
       .live-body span { max-width: 300px; color: #90a8c4; font-size: 12px; line-height: 1.55; }
       .live-cta { padding: 9px 17px; border: 0; border-radius: 7px; background: #334fc3; color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; }
@@ -54,6 +62,22 @@
       .lane.done i { color: #58dda1; }
       .lane.failed i { color: #ff765d; }
 
+      /* Two outputs side by side, with the source still inset for comparison. */
+      .results { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; height: var(--media-h, 302px); }
+      .results[data-panes="1"] { grid-auto-flow: row; }
+      .result { display: grid; min-width: 0; grid-template-rows: 1fr auto; gap: 5px; margin: 0; }
+      .result img, .result video { width: 100%; height: 100%; overflow: hidden; border-radius: 8px; background: #061427; object-fit: contain; }
+      .result figcaption { color: #9db3cd; font-size: 10px; text-align: center; }
+      .result.is-failed { place-items: center; }
+      .result.is-failed span { display: grid; align-content: center; justify-items: center; gap: 6px; width: 100%; height: 100%; padding: 12px; border: 1px dashed rgba(255,194,77,.4); border-radius: 8px; text-align: center; }
+      .result.is-failed b { color: #ffc24d; font-size: 11px; font-weight: 600; }
+      .result.is-failed i { color: #9db3cd; font-size: 10px; font-style: normal; line-height: 1.45; }
+      .card.is-approved .result img, .card.is-approved .result video { box-shadow: 0 0 0 2px #58dda1; }
+      .card.is-rejected .result img, .card.is-rejected .result video { box-shadow: 0 0 0 2px #ff765d; opacity: .62; }
+      .review-note.is-approved { color: #9db3cd; }
+      .review-note.is-rejected { color: #9db3cd; }
+      .live-cta.is-quiet { background: transparent; border: 1px solid rgba(143,208,248,.35); color: #cfe6f7; font-size: 12px; padding: 6px 13px; }
+      .live-cta.is-quiet:hover { border-color: #62d5ee; background: rgba(98,213,238,.1); }
       .review { display: grid; gap: 8px; justify-items: center; }
       .review-note { max-width: 320px; color: #ffc24d; font-size: 11px; line-height: 1.5; }
       .review-actions { display: flex; gap: 7px; }
@@ -78,6 +102,6 @@
         <button type="button" id="next" aria-label="Next example">&#8250;</button>
       </nav>
     </main>
-    <script src="generate-interactive.js?v=4"></script>
+    <script src="generate-interactive.js?v=11"></script>
   </body>
 </html>

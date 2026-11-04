@@ -31,6 +31,17 @@ const imageAspect = {
 
 const videoPrompt = 'Freestyle animate the image with creative and dynamic movement. Add natural motion, subtle transformations, and bring the scene to life with organic animation. Apply a slow motion effect to the animation, making all movements appear more deliberate and elegant. Reduce the speed to create a dreamy, cinematic quality.';
 
+// Saved clips for the built-in samples, keyed by source asset id. The edge cache is
+// best-effort -- it keeps separate copies per machine within a colo, so two quick
+// clicks can each pay for a generation -- and a scripted demo wants the same clip
+// every time anyway. Prospect uploads still generate live.
+const sampleVideos = {
+  // Product shot
+  '5c7196be9cbacc936ce5dd63c0f40b88': 'v1793396093/image-to-video/i2v_0dabcf17103a4175aa293eacc71fb766.mp4',
+  // Travel & hospitality
+  '3dcc4f49c564cbcf31adadb82a6877b2': 'v1793399366/image-to-video/i2v_4952ccb97c144835865efee2ad779ce1.mp4'
+};
+
 const assetIdPattern = /^[A-Za-z0-9_-]{16,64}$/;
 const jobIdPattern = /^[A-Za-z0-9_-]{8,128}$/;
 
@@ -190,6 +201,14 @@ async function generateVideo(request, env, origin) {
     return json({
       blocked: true,
       reason: 'Generative edits are disabled for creator content: rights in contributor media are held by the contributor, not the brand.'
+    }, 200, origin);
+  }
+
+  const saved = sampleVideos[assetId];
+  if (saved) {
+    return json({
+      video: { url: 'https://res.cloudinary.com/' + env.CLOUDINARY_CLOUD_NAME + '/video/upload/' + saved },
+      saved: true
     }, 200, origin);
   }
 

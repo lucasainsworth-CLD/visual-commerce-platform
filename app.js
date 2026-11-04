@@ -186,10 +186,10 @@ function syncOrchestrationStatus() {
   const review = $('#orchestrate-review');
   if (review) {
     review.textContent = generateDecision === 'approved'
-      ? 'In this run the generated clip was approved, so the workflow continued to delivery.'
+      ? 'In this run the generated output was approved, so the workflow continued to delivery.'
       : generateDecision === 'rejected'
-        ? 'In this run the generated clip was rejected, so nothing was published.'
-        : 'In this demo, image-to-video is manually reviewed before publication.';
+        ? 'In this run the generated output was rejected, so nothing was published.'
+        : 'In this demo, generative output is manually reviewed before publication.';
   }
 }
 
@@ -274,7 +274,7 @@ function updateOptimizeDelivery() {
   const image = $('#optimize-delivery');
   if (!image || !assetSource) return;
   const deliveryUrl = assetSource.includes('/image/upload/')
-    ? assetSource.replace('/image/upload/', '/image/upload/c_scale,w_600/f_auto/q_auto/')
+    ? assetSource.replace('/image/upload/', '/image/upload/c_scale,w_1200/f_auto/q_auto/')
     : assetSource;
   image.src = deliveryUrl;
   updateOptimizeMeasurements(assetSource, deliveryUrl);
@@ -464,13 +464,45 @@ function syncEnrichVisual() {
 
 let enrichImageSize = null;
 
+// Enrich sizes itself to the asset's aspect ratio. Transform and Generate adopt the
+// same height so the three stages stay level and their content gets the same room.
+const stageFrames = ['#enrich-visual', '#transform-visual', '#generate-visual'];
+
 function resizeEnrichVisual(width, height) {
-  const frame = $('#enrich-visual');
-  if (!frame || !width || !height) return;
+  if (!width || !height) return;
   enrichImageSize = { width, height };
-  const frameWidth = frame.getBoundingClientRect().width;
-  const targetHeight = frameWidth * (height / width);
-  frame.style.height = `${Math.round(Math.min(900, Math.max(540, targetHeight)))}px`;
+  applyStageHeight();
+}
+
+// Inactive slides are display:none, so their frames measure zero. Fall back to the
+// active slide's own grid track, which is the width any stage frame will take.
+function stageFrameWidth() {
+  const visible = stageFrames
+    .map((selector) => $(selector))
+    .find((node) => node && node.getBoundingClientRect().width > 0);
+  if (visible) return visible.getBoundingClientRect().width;
+  const slide = document.querySelector('.slide.active');
+  if (!slide) return 0;
+  const tracks = getComputedStyle(slide).gridTemplateColumns.split(' ').map(parseFloat);
+  return tracks.length > 1 ? tracks[tracks.length - 1] : 0;
+}
+
+function applyStageHeight() {
+  const frame = $('#enrich-visual');
+  if (!frame) return;
+  // Below the breakpoint the stylesheet sets per-stage heights; leave those alone.
+  if (!matchMedia('(min-width: 851px)').matches) {
+    stageFrames.forEach((selector) => { const node = $(selector); if (node) node.style.removeProperty('height'); });
+    return;
+  }
+  const frameWidth = stageFrameWidth();
+  if (!enrichImageSize || !frameWidth) return;
+  const target = frameWidth * (enrichImageSize.height / enrichImageSize.width);
+  const height = Math.round(Math.min(900, Math.max(540, target)));
+  stageFrames.forEach((selector) => {
+    const node = $(selector);
+    if (node) node.style.height = `${height}px`;
+  });
 }
 
 function syncTransformVisual() {
@@ -960,9 +992,7 @@ addEventListener('message', (event) => {
     syncOrchestrationStatus();
   }
 });
-addEventListener('resize', () => {
-  if (enrichImageSize) resizeEnrichVisual(enrichImageSize.width, enrichImageSize.height);
-});
+addEventListener('resize', applyStageHeight);
 
 document.querySelectorAll('a[href^="#"]:not([data-sample])').forEach((link) => {
   link.onclick = (event) => {
@@ -988,3 +1018,203 @@ addEventListener('hashchange', () => {
 
 updateAsset({ source: 'https://res.cloudinary.com/demohost/image/upload/v1787601621/utctndwrbavu4seggpqu.jpg' });
 go(Math.max(0, ids.indexOf(location.hash.slice(1))));
+
+// Sweeping across the Optimize frame fills it with whichever version that side belongs to,
+// so the original and the delivered file can be compared at full size. The active card is
+// chosen from the pointer's x position rather than from what lies under it, because a card
+// filling the frame covers the other one and would otherwise trap the pointer. The middle
+// band is left alone so the savings gauge stays reachable.
+//
+// The fold runs through the Web Animations API rather than a CSS keyframe so it can play
+// in reverse on the way out: the card fades back down over the resting pair instead of
+// being cut away, which is what made the swap feel abrupt.
+function initOptimizeZoom() {
+  const showcase = $('#optimize-showcase');
+  if (!showcase) return;
+  const cards = [...showcase.querySelectorAll('.optimize-card')];
+  if (cards.length !== 2) return;
+
+  const gaugeHalfWidth = 59;
+  const easeOut = 'cubic-bezier(.2, .7, .3, 1)';
+  const stillFrame = (card) => ({
+    opacity: 0,
+    transform: `rotateY(${card.classList.contains('optimized') ? '' : '-'}14deg) scale(.965)`
+  });
+  let activeCard = null;
+
+  function foldIn(card) {
+    card.__fold?.cancel();
+    card.classList.add('is-zoomed');
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      card.__fold = card.animate([stillFrame(card), { opacity: 1, transform: 'none' }],
+        { duration: 620, easing: easeOut });
+    }
+  }
+
+  function foldOut(card) {
+    card.__fold?.cancel();
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      card.classList.remove('is-zoomed');
+      return;
+    }
+    const animation = card.animate([{ opacity: 1, transform: 'none' }, stillFrame(card)],
+      { duration: 420, easing: 'cubic-bezier(.4, 0, .7, .4)' });
+    card.__fold = animation;
+    animation.finished
+      .then(() => { if (activeCard !== card) card.classList.remove('is-zoomed'); })
+      .catch(() => { /* Cancelled because the pointer came back. */ });
+  }
+
+  function setZoom(next) {
+    if (next === activeCard) return;
+    const previous = activeCard;
+    activeCard = next;
+    if (previous) foldOut(previous);
+    if (next) foldIn(next);
+  }
+
+  showcase.addEventListener('pointermove', (event) => {
+    if (!matchMedia('(hover: hover) and (min-width: 851px)').matches) { setZoom(null); return; }
+    const bounds = showcase.getBoundingClientRect();
+    const middle = bounds.width / 2;
+    const offset = event.clientX - bounds.left;
+    setZoom(Math.abs(offset - middle) < gaugeHalfWidth ? null : (offset < middle ? cards[0] : cards[1]));
+  });
+  showcase.addEventListener('pointerleave', () => setZoom(null));
+}
+initOptimizeZoom();
+
+// Each Deliver variant pops out to the pixel size it is really delivered at -- the point of
+// the slide is that four channels get four genuinely different renditions -- clamped to the
+// frame so the widest one still fits. Three things make it behave:
+//   * the popped card is taken out of the flex row and a spacer holds its slot, so the three
+//     cards behind it keep their exact resting geometry and nothing slides;
+//   * which card is popped is chosen from the pointer's x against the resting row, not from
+//     the element under the cursor -- a card filling the frame would otherwise block the
+//     pointer from ever reaching its neighbours;
+//   * the growth is a FLIP from the card's resting rect, so it starts where the thumbnail sat.
+function initDeliverPop() {
+  const showcase = $('#deliver-showcase');
+  if (!showcase) return;
+  const cards = [...showcase.querySelectorAll('.deliver-card')];
+  if (!cards.length) return;
+
+  const pad = 12;
+  // One spacer per card: during a crossover the outgoing card is still absolute while it
+  // animates home, so both slots have to be held at once.
+  const spacers = new Map(cards.map((card) => {
+    const slot = document.createElement('i');
+    slot.className = 'deliver-slot';
+    slot.setAttribute('aria-hidden', 'true');
+    return [card, slot];
+  }));
+  const desktopOnly = () => matchMedia('(hover: hover) and (min-width: 851px)').matches;
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let poppedCard = null;
+  let bands = null;
+
+  function measureBands() {
+    const bounds = showcase.getBoundingClientRect();
+    bands = cards.map((card) => {
+      const rect = card.getBoundingClientRect();
+      return { card, left: rect.left - bounds.left, right: rect.right - bounds.left };
+    });
+  }
+
+  function popGeometry(card) {
+    const image = card.querySelector('img');
+    const caption = card.querySelector('figcaption');
+    if (!image || !image.naturalWidth || !image.naturalHeight) return null;
+    const captionHeight = caption ? caption.offsetHeight : 0;
+    const maxWidth = showcase.clientWidth - pad * 2;
+    const maxHeight = showcase.clientHeight - captionHeight - pad * 2;
+    if (maxWidth <= 0 || maxHeight <= 0) return null;
+    // Never upscale past the delivered rendition: "full size" means its own pixels.
+    let width = Math.min(image.naturalWidth, maxWidth);
+    let height = width * image.naturalHeight / image.naturalWidth;
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * image.naturalWidth / image.naturalHeight;
+    }
+    return {
+      width: Math.round(width),
+      height: Math.round(height) + captionHeight,
+      left: Math.round((showcase.clientWidth - width) / 2),
+      top: Math.round((showcase.clientHeight - (height + captionHeight)) / 2)
+    };
+  }
+
+  function lift(card, geometry) {
+    const slot = spacers.get(card);
+    slot.style.flex = `0 0 ${card.getBoundingClientRect().width}px`;
+    card.after(slot);
+    card.classList.add('is-popped');
+    card.style.width = geometry.width + 'px';
+    card.style.left = geometry.left + 'px';
+    card.style.top = geometry.top + 'px';
+  }
+
+  function drop(card) {
+    card.classList.remove('is-popped');
+    card.style.width = card.style.left = card.style.top = '';
+    spacers.get(card).remove();
+  }
+
+  function pop(card) {
+    const geometry = popGeometry(card);
+    if (!geometry) return;
+    card.__pop?.cancel();
+    const before = card.getBoundingClientRect();
+    lift(card, geometry);
+    if (reduced()) return;
+    const after = card.getBoundingClientRect();
+    card.__pop = card.animate([
+      {
+        opacity: .6,
+        transformOrigin: 'top left',
+        transform: `translate(${before.left - after.left}px, ${before.top - after.top}px) scale(${before.width / after.width})`
+      },
+      { opacity: 1, transformOrigin: 'top left', transform: 'none' }
+    ], { duration: 460, easing: 'cubic-bezier(.2, .7, .3, 1)' });
+  }
+
+  function unpop(card, resting) {
+    card.__pop?.cancel();
+    const popped = card.getBoundingClientRect();
+    const settle = () => { if (poppedCard !== card) drop(card); };
+    if (reduced() || !popped.width || !resting.width) { settle(); return; }
+    const animation = card.animate([
+      { opacity: 1, transformOrigin: 'top left', transform: 'none' },
+      {
+        opacity: .6,
+        transformOrigin: 'top left',
+        transform: `translate(${resting.left - popped.left}px, ${resting.top - popped.top}px) scale(${resting.width / popped.width})`
+      }
+    ], { duration: 320, easing: 'cubic-bezier(.4, 0, .7, .4)' });
+    card.__pop = animation;
+    animation.finished.then(settle).catch(() => { /* Cancelled: the pointer came back. */ });
+  }
+
+  function setPopped(next) {
+    if (next === poppedCard) return;
+    const previous = poppedCard;
+    // The slot the outgoing card is flying back to, read while it is still held open.
+    const resting = previous ? spacers.get(previous).getBoundingClientRect() : null;
+    poppedCard = next;
+    if (previous) unpop(previous, resting);
+    if (next) pop(next);
+  }
+
+  showcase.addEventListener('pointermove', (event) => {
+    if (!desktopOnly()) { setPopped(null); return; }
+    // Measured once, while everything is resting: the spacers keep the row's geometry fixed
+    // from then on, so the bands stay true even with a card popped.
+    if (!bands) measureBands();
+    const x = event.clientX - showcase.getBoundingClientRect().left;
+    const hit = bands.find((band) => x >= band.left && x <= band.right);
+    setPopped(hit ? hit.card : null);
+  });
+  showcase.addEventListener('pointerleave', () => setPopped(null));
+  addEventListener('resize', () => { bands = null; });
+}
+initDeliverPop();
