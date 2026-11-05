@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Orchestration flow</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; color: #eaf6ff; font-family: Inter, Arial, sans-serif; }
+
+      /* The canvas borrows MediaFlows' own layout language -- a trigger at the top, a spine
+         that forks into parallel branches, rounded blocks with a category-coloured icon tile
+         -- in the deck's dark palette so the slide still belongs to the rest of the story. */
+      .stage { position: relative; display: grid; width: 100%; height: 100%; grid-template-rows: auto 1fr auto; overflow: hidden; border: 1px solid rgba(185,212,255,.16); border-radius: 15px; background: #0b1220; }
+      .stage > header { display: flex; justify-content: space-between; gap: 12px; padding: 14px 17px; border-bottom: 1px solid rgba(185,212,255,.16); color: #aebed2; font: 10px monospace; letter-spacing: .12em; }
+
+      .canvas { position: relative; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; gap: 0; padding: 16px 18px 10px; overflow: hidden; background-image: linear-gradient(#7096d115 1px, transparent 1px), linear-gradient(90deg, #7096d115 1px, transparent 1px); background-size: 34px 34px; }
+
+      /* ---- blocks ---- */
+      .node { position: relative; display: flex; width: 100%; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid rgba(143,208,248,.3); border-radius: 10px; background: linear-gradient(165deg, #10294c, #0a1b33); color: inherit; cursor: pointer; font: inherit; text-align: left; transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease, opacity .2s ease; }
+      .node:hover { border-color: rgba(98,213,238,.55); transform: translateY(-1px); }
+      .node:focus-visible { outline: 2px solid #62d5ee; outline-offset: 2px; }
+      .node.is-open { border-color: #62d5ee; box-shadow: 0 0 0 1px rgba(98,213,238,.3), 0 14px 32px rgba(0,0,0,.45); }
+      .stage.has-open .node:not(.is-open) { opacity: .42; }
+      .node > span { display: grid; min-width: 0; gap: 2px; }
+      .node small { color: var(--tone, #8ea6c4); font: 7.5px monospace; letter-spacing: .1em; text-transform: uppercase; }
+      .node strong { color: #f2f8ff; font-size: 11px; font-weight: 600; letter-spacing: -.01em; }
+      /* The icon tile is the one piece lifted straight from the product's own blocks. */
+      .tile { display: grid; width: 26px; height: 26px; flex: none; place-items: center; border: 1px solid color-mix(in srgb, var(--tone) 38%, transparent); border-radius: 7px; background: color-mix(in srgb, var(--tone) 16%, transparent); }
+      .tile svg { width: 13px; height: 13px; stroke: var(--tone); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* The trigger block wears the product's lightning badge. */
+      .trigger-wrap { position: relative; width: min(258px, 100%); }
+      .trigger-wrap .node { border-color: rgba(98,213,238,.45); }
+      .bolt { position: absolute; z-index: 3; top: -8px; left: -8px; display: grid; width: 19px; height: 19px; place-items: center; border-radius: 50%; background: #334fc3; box-shadow: 0 3px 9px rgba(0,0,0,.45); }
+      .bolt svg { width: 10px; height: 10px; fill: #fff; stroke: none; }
+
+      /* ---- connectors ---- */
+      .link { position: relative; width: 2px; height: var(--len, 24px); background: rgba(118,160,224,.42); }
+      .link::before, .link::after { position: absolute; left: 50%; width: 6px; height: 6px; border: 1.5px solid #6f8dc4; border-radius: 50%; background: #0b1220; content: ''; transform: translateX(-50%); }
+      .link::before { top: -3px; }
+      .link::after { bottom: -3px; }
+
+      .fork { width: 100%; height: 46px; }
+      .fork svg { display: block; width: 100%; height: 100%; overflow: visible; }
+      .fork path { fill: none; stroke: rgba(118,160,224,.42); stroke-width: 2; }
+      .fork circle.pip { fill: #0b1220; stroke: #6f8dc4; stroke-width: 1.5; }
+
+      /* ---- branches ---- */
+      .branches { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; align-content: start; justify-items: center; }
+      .branch { display: grid; width: 100%; justify-items: center; gap: 0; }
+      .branch > p { display: flex; align-items: center; gap: 6px; margin: 0 0 9px; color: #7f97b6; font: 8px monospace; letter-spacing: .12em; text-transform: uppercase; }
+      .branch > p b { color: var(--tone); font-weight: 400; }
+
+      /* ---- downstream rail ---- */
+      .stage > footer { display: grid; gap: 8px; padding: 11px 17px 13px; border-top: 1px solid rgba(185,212,255,.16); }
+      .stage > footer > p { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0; color: #7f97b6; font: 8px monospace; letter-spacing: .12em; text-transform: uppercase; }
+      .stage > footer > p::before, .stage > footer > p::after { flex: 1; height: 1px; background: rgba(185,212,255,.14); content: ''; }
+      .rail { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+      .chip { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px dashed rgba(143,208,248,.36); border-radius: 999px; background: rgba(8,24,46,.6); color: #cbd9ec; cursor: pointer; font: 9px Inter, Arial, sans-serif; letter-spacing: .02em; transition: border-color .2s ease, color .2s ease, opacity .2s ease, transform .2s ease; }
+      .chip:hover { border-color: rgba(98,213,238,.6); color: #fff; transform: translateY(-1px); }
+      .chip:focus-visible { outline: 2px solid #62d5ee; outline-offset: 2px; }
+      .chip.is-open { border-style: solid; border-color: #62d5ee; color: #fff; }
+      .stage.has-open .chip:not(.is-open) { opacity: .42; }
+      .chip svg { width: 11px; height: 11px; flex: none; stroke: var(--tone, #8ea6c4); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* ---- the detail that explodes out of a block ---- */
+      .detail { position: absolute; z-index: 20; display: none; width: 268px; padding: 12px 13px 13px; border: 1px solid #62d5ee; border-radius: 11px; background: rgba(6,20,39,.97); box-shadow: 0 20px 48px rgba(0,0,0,.62); }
+      .detail.is-shown { display: block; animation: burst .26s cubic-bezier(.2,.7,.3,1); }
+      @keyframes burst { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+      .detail header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+      .detail header span { color: var(--tone, #62d5ee); font: 7.5px monospace; letter-spacing: .1em; text-transform: uppercase; }
+      .detail header button { display: grid; width: 17px; height: 17px; flex: none; place-items: center; border: 0; border-radius: 50%; background: rgba(143,208,248,.14); color: #cbd9ec; cursor: pointer; font-size: 11px; line-height: 1; }
+      .detail header button:hover { background: rgba(98,213,238,.26); color: #fff; }
+      .detail h3 { margin: 0 0 5px; color: #fff; font-size: 12.5px; font-weight: 600; letter-spacing: -.01em; }
+      .detail > p { margin: 0; color: #a9bdd6; font-size: 10.5px; line-height: 1.52; }
+      .detail dl { display: grid; margin: 9px 0 0; gap: 4px; padding-top: 9px; border-top: 1px solid rgba(185,212,255,.14); }
+      .detail div { display: flex; justify-content: space-between; gap: 10px; }
+      .detail dt { color: #7f97b6; font: 8.5px monospace; letter-spacing: .05em; text-transform: uppercase; }
+      .detail dd { margin: 0; color: #d7e6f7; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
+      .detail .aside { margin: 9px 0 0; padding: 7px 8px; border-left: 2px solid var(--tone, #62d5ee); border-radius: 0 5px 5px 0; background: rgba(98,213,238,.08); color: #bcd0e6; font-size: 9.5px; line-height: 1.5; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .node, .chip { transition: none; }
+        .detail.is-shown { animation: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage" id="stage">
+      <header>MEDIAFLOWS / ORCHESTRATION: HOW THIS DEMO RUNS ITSELF</header>
+      <div class="canvas" id="canvas">
+        <div class="trigger-wrap" id="trigger"></div>
+        <div class="fork">
+          <svg viewBox="0 0 300 46" preserveAspectRatio="none" aria-hidden="true">
+            <path id="fork-a" d="M150 0 V12 Q150 22 140 22 H85 Q75 22 75 32 V46"></path>
+            <path id="fork-b" d="M150 0 V12 Q150 22 160 22 H215 Q225 22 225 32 V46"></path>
+            <circle class="pip" cx="150" cy="1" r="3"></circle>
+          </svg>
+        </div>
+        <div class="branches" id="branches"></div>
+      </div>
+      <footer>
+        <p>Beyond MediaFlows &middot; delivery-time and connected automation</p>
+        <div class="rail" id="rail"></div>
+      </footer>
+      <div class="detail" id="detail" role="dialog" aria-live="polite"></div>
+    </main>
+    <script src="orchestrate-interactive.js?v=5"></script>
+  </body>
+</html>

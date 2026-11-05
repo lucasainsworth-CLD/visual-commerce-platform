@@ -9,6 +9,15 @@ const lifestyleSubjectValue = 'lifestyle_shot';
 const productSubjectValue = 'product_shot';
 const creatorSubjectValue = 'ugc___creator';
 const travelSubjectValue = 'sqeyaugdmr39vxwznqxa';
+const subjectLabels = {
+  [lifestyleSubjectValue]: 'Lifestyle Shot',
+  [productSubjectValue]: 'Product Shot',
+  [creatorSubjectValue]: 'UGC / Creator Contribution',
+  [travelSubjectValue]: 'Travel and Hospitality'
+};
+// The structured metadata field stores a datasource external ID, which is not always
+// readable. Show the human label the picker used, and fall back to the stored value.
+const subjectLabel = (value) => subjectLabels[value] || value;
 const moderationRuleCatalog = {
   people: { label: 'No Identifiable People', rejectionReason: 'Identifiable person detected' },
   quality: { label: 'Image Quality Check', rejectionReason: 'Low image quality' },
@@ -183,14 +192,10 @@ function syncOrchestrationStatus() {
   if (empty) empty.hidden = selectedAsset;
   const diagram = $('#orchestrate-diagram');
   if (diagram) diagram.hidden = !selectedAsset;
-  const review = $('#orchestrate-review');
-  if (review) {
-    review.textContent = generateDecision === 'approved'
-      ? 'In this run the generated output was approved, so the workflow continued to delivery.'
-      : generateDecision === 'rejected'
-        ? 'In this run the generated output was rejected, so nothing was published.'
-        : 'In this demo, generative output is manually reviewed before publication.';
-  }
+  // The diagram narrates the Generate stage's review decision back to the prospect, so the
+  // slide stays a recap of the run they just watched.
+  const frame = $('#orchestrate-visual');
+  frame?.contentWindow?.postMessage({ type: 'orchestrate:decision', decision: generateDecision }, location.origin);
 }
 
 function beginAssetLifecycle() {
@@ -359,12 +364,17 @@ function syncOptimizeVisual() {
   empty.hidden = selectedAsset;
   showcase.hidden = !selectedAsset;
   setCanvasBusy('optimize', selectedAsset && lifecycleStatus.optimize === 'processing');
+  // A card left open would still be filling the frame on the way back in.
+  collapseOptimizeZoom();
 }
 
+// Assigned by initOptimizeZoom once the showcase is wired.
+let collapseOptimizeZoom = () => {};
+
 const deliverVariants = [
-  { id: 'mobile', transformation: 'c_fill,ar_9:16,w_400/f_auto/q_auto' },
-  { id: 'square', transformation: 'c_fill,ar_1:1,w_300/f_auto/q_auto' },
-  { id: 'tablet', transformation: 'c_fill,ar_4:3,w_500/f_auto/q_auto' },
+  { id: 'mobile', transformation: 'c_fill,g_auto,ar_9:16,w_400/f_auto/q_auto' },
+  { id: 'square', transformation: 'c_fill,g_auto,ar_1:1,w_300/f_auto/q_auto' },
+  { id: 'tablet', transformation: 'c_fill,g_auto,ar_4:3,w_500/f_auto/q_auto' },
   { id: 'desktop', transformation: 'c_scale,w_800/f_auto/q_auto' }
 ];
 
@@ -375,7 +385,12 @@ function syncDeliverVisual() {
   empty.hidden = selectedAsset;
   showcase.hidden = !selectedAsset;
   setCanvasBusy('deliver', selectedAsset && lifecycleStatus.deliver === 'processing');
+  // A card left popped would still be sitting over the row on the way back in.
+  collapseDeliverPop();
 }
+
+// Assigned by initDeliverPop once the showcase is wired.
+let collapseDeliverPop = () => {};
 
 function deliveryUrl(transformation) {
   if (!assetSource || !assetSource.includes('/image/upload/')) return assetSource;
@@ -432,9 +447,14 @@ function enrichmentOnlyAsset(asset) {
     Object.entries(fields).filter(([key]) => !/^moderation(?:_|$)/i.test(key))
   );
 
+  const metadata = omitModeration(asset.metadata);
+  if (metadata[structuredMetadataField]) {
+    metadata[structuredMetadataField] = subjectLabel(metadata[structuredMetadataField]);
+  }
+
   return {
     ...asset,
-    metadata: omitModeration(asset.metadata),
+    metadata,
     context: omitModeration(asset.context)
   };
 }
@@ -662,7 +682,7 @@ function syncModerationVisual() {
   const failed = Number(summary.failed) || 0;
   const total = Number(summary.total) || passed + failed;
   summaryLabel.textContent = total
-    ? `${passed} of ${total} checks approved. Automations can trigger actions when any rule passes or fails.`
+    ? `${passed} of ${total} rules passed. Automations can trigger actions when any rule passes or fails.`
     : `Moderation ${String(moderation.status || 'complete').toLowerCase()}. Rule counts are not available.`;
   const rows = categoryModerationRows(latestModerationAsset, summary, reasons) ||
     reasons.map((reason) => ({ label: moderationReasonLabel(reason), state: 'rejected' }));
@@ -1019,11 +1039,11 @@ addEventListener('hashchange', () => {
 updateAsset({ source: 'https://res.cloudinary.com/demohost/image/upload/v1787601621/utctndwrbavu4seggpqu.jpg' });
 go(Math.max(0, ids.indexOf(location.hash.slice(1))));
 
-// Sweeping across the Optimize frame fills it with whichever version that side belongs to,
-// so the original and the delivered file can be compared at full size. The active card is
-// chosen from the pointer's x position rather than from what lies under it, because a card
-// filling the frame covers the other one and would otherwise trap the pointer. The middle
-// band is left alone so the savings gauge stays reachable.
+// Clicking either side of the Optimize frame fills it with that version, so the original and
+// the delivered file can be compared at full size; clicking again puts it back. The card is
+// chosen from the click's x position rather than from what lies under it, because a card
+// filling the frame covers the other one and would otherwise swallow every later click. The
+// middle band is left alone so the savings gauge stays reachable.
 //
 // The fold runs through the Web Animations API rather than a CSS keyframe so it can play
 // in reverse on the way out: the card fades back down over the resting pair instead of
@@ -1073,14 +1093,19 @@ function initOptimizeZoom() {
     if (next) foldIn(next);
   }
 
-  showcase.addEventListener('pointermove', (event) => {
-    if (!matchMedia('(hover: hover) and (min-width: 851px)').matches) { setZoom(null); return; }
+  collapseOptimizeZoom = () => setZoom(null);
+
+  showcase.addEventListener('click', (event) => {
+    if (!matchMedia('(min-width: 851px)').matches) { setZoom(null); return; }
+    // The open card covers the whole frame, so the second click lands on it wherever it
+    // falls: any click while one is open is the click that closes it.
+    if (activeCard) { setZoom(null); return; }
     const bounds = showcase.getBoundingClientRect();
     const middle = bounds.width / 2;
     const offset = event.clientX - bounds.left;
-    setZoom(Math.abs(offset - middle) < gaugeHalfWidth ? null : (offset < middle ? cards[0] : cards[1]));
+    if (Math.abs(offset - middle) < gaugeHalfWidth) return;
+    setZoom(offset < middle ? cards[0] : cards[1]);
   });
-  showcase.addEventListener('pointerleave', () => setZoom(null));
 }
 initOptimizeZoom();
 
@@ -1089,9 +1114,9 @@ initOptimizeZoom();
 // frame so the widest one still fits. Three things make it behave:
 //   * the popped card is taken out of the flex row and a spacer holds its slot, so the three
 //     cards behind it keep their exact resting geometry and nothing slides;
-//   * which card is popped is chosen from the pointer's x against the resting row, not from
-//     the element under the cursor -- a card filling the frame would otherwise block the
-//     pointer from ever reaching its neighbours;
+//   * a click on the popped card puts it back, and a click on any still-visible neighbour
+//     hands the frame straight to that one -- with a click the element under the cursor is
+//     authoritative, so there is no need to guess the card from the pointer's x;
 //   * the growth is a FLIP from the card's resting rect, so it starts where the thumbnail sat.
 function initDeliverPop() {
   const showcase = $('#deliver-showcase');
@@ -1108,18 +1133,10 @@ function initDeliverPop() {
     slot.setAttribute('aria-hidden', 'true');
     return [card, slot];
   }));
-  const desktopOnly = () => matchMedia('(hover: hover) and (min-width: 851px)').matches;
+  // No (hover: hover) gate: a click works on a touch screen too.
+  const wideEnough = () => matchMedia('(min-width: 851px)').matches;
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   let poppedCard = null;
-  let bands = null;
-
-  function measureBands() {
-    const bounds = showcase.getBoundingClientRect();
-    bands = cards.map((card) => {
-      const rect = card.getBoundingClientRect();
-      return { card, left: rect.left - bounds.left, right: rect.right - bounds.left };
-    });
-  }
 
   function popGeometry(card) {
     const image = card.querySelector('img');
@@ -1205,16 +1222,14 @@ function initDeliverPop() {
     if (next) pop(next);
   }
 
-  showcase.addEventListener('pointermove', (event) => {
-    if (!desktopOnly()) { setPopped(null); return; }
-    // Measured once, while everything is resting: the spacers keep the row's geometry fixed
-    // from then on, so the bands stay true even with a card popped.
-    if (!bands) measureBands();
-    const x = event.clientX - showcase.getBoundingClientRect().left;
-    const hit = bands.find((band) => x >= band.left && x <= band.right);
-    setPopped(hit ? hit.card : null);
+  collapseDeliverPop = () => setPopped(null);
+
+  showcase.addEventListener('click', (event) => {
+    if (!wideEnough()) { setPopped(null); return; }
+    const clicked = event.target.closest('.deliver-card');
+    // The popped card sits over the row, so clicking it is the click that puts it back.
+    // Any neighbour still reachable beside it hands the frame straight over instead.
+    setPopped(clicked && clicked !== poppedCard ? clicked : null);
   });
-  showcase.addEventListener('pointerleave', () => setPopped(null));
-  addEventListener('resize', () => { bands = null; });
 }
 initDeliverPop();

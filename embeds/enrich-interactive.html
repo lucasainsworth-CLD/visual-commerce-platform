@@ -74,8 +74,8 @@
           const source = uploadTags.has(String(tag).trim().toLowerCase()) ? 'category' : 'ai';
           return { type: 'tag', source, group: source === 'category' ? 'Category tag' : 'AI tag', value: tag };
         });
-        const metadata = Object.entries(asset.metadata || {}).map(([key, value]) => ({ type: 'metadata', group: key.replaceAll('_', ' '), value: displayValue(value) }));
-        const context = Object.entries(asset.context || {}).map(([key, value]) => ({ type: 'metadata', group: key.replaceAll('_', ' '), value: displayValue(value) }));
+        const metadata = Object.entries(asset.metadata || {}).map(([key, value]) => ({ type: 'metadata', group: key.replaceAll('_', ' ').trim(), value: displayValue(value) }));
+        const context = Object.entries(asset.context || {}).map(([key, value]) => ({ type: 'metadata', group: key.replaceAll('_', ' ').trim(), value: displayValue(value) }));
         const structuredMetadata = [...metadata, ...context].slice(0, 10);
         return [...tags, ...structuredMetadata];
       }

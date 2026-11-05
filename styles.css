@@ -189,6 +189,7 @@ dt { color: #97a9c1; font-size: 11px; } dd { margin: 0; font: 11px monospace; }
 .transform-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 12px; background: #06172c; }
 .generate-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 12px; background: #06172c; }
 .connect-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 15px; background: #0b1220; }
+.orchestrate-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 15px; background: #0b1220; }
 
 .generate-showcase { position: relative; display: flex; min-height: 540px; align-items: center; gap: 14px; }
 .generate-showcase[hidden] { display: none; }
@@ -253,13 +254,15 @@ dt { color: #97a9c1; font-size: 11px; } dd { margin: 0; font: 11px monospace; }
 .optimize-card figcaption i { color: #8da4c0; font: 9px Inter, sans-serif; font-style: normal; }
 .optimize-card > img { display: block; width: 100%; height: 435px; padding: 10px 0 0; object-fit: contain; background: #061326; }
 .optimize-card.optimized { border-color: #58dda166; }
-/* Hovering fills the frame with one version or the other so it can be judged at size. The
-   active card is chosen by pointer position, not by what sits under the cursor: a card
-   filling the frame would otherwise block the pointer from ever reaching the other one.
+/* Clicking fills the frame with one version or the other so it can be judged at size, and
+   clicking again puts it back. The active card is chosen by click position, not by what sits
+   under it: a card filling the frame would otherwise swallow every click after the first.
    The fold itself is driven from script so it can play in both directions -- the card has
-   to fade back out as well as in, or leaving is a cut however gentle the entrance was. */
-@media (hover: hover) and (min-width: 851px) {
+   to fade back out as well as in, or closing is a cut however gentle the entrance was.
+   No (hover: hover) gate: a click works on a touch screen too. */
+@media (min-width: 851px) {
   .optimize-showcase { perspective: 1600px; }
+  .optimize-showcase > .optimize-card { cursor: pointer; }
   .optimize-showcase > .optimize-card.is-zoomed { position: absolute; z-index: 6; inset: 0; display: flex; flex-direction: column; border-color: #62d5ee; box-shadow: 0 24px 60px rgba(0, 0, 0, .6); }
   .optimize-showcase > .optimize-card.is-zoomed > img { flex: 1; height: auto; min-height: 0; padding: 10px; }
   /* Each card folds in from the edge it already sits on. */
@@ -290,11 +293,13 @@ dt { color: #97a9c1; font-size: 11px; } dd { margin: 0; font: 11px monospace; }
 .deliver-card figcaption { display: grid; gap: 3px; min-height: 51px; padding: 9px 10px; border-top: 1px solid var(--line); }
 .deliver-card figcaption strong { color: #eaf4ff; font-size: 10px; font-weight: 600; }
 .deliver-card figcaption span { color: #93a8c4; font: 8px/1.35 monospace; overflow-wrap: anywhere; }
-/* Hovering a variant pops it out to the size it is actually delivered at, capped by the
-   frame. The card leaves the row to do it, so the row behind keeps its own geometry and
-   nothing reflows; the pop itself is a FLIP from the card's resting rect, driven from
-   script because the target size depends on the image's natural dimensions. */
-@media (hover: hover) and (min-width: 851px) {
+/* Clicking a variant pops it out to the size it is actually delivered at, capped by the
+   frame; clicking it again puts it back. The card leaves the row to do it, so the row behind
+   keeps its own geometry and nothing reflows; the pop itself is a FLIP from the card's
+   resting rect, driven from script because the target size depends on the image's natural
+   dimensions. No (hover: hover) gate: a click works on a touch screen too. */
+@media (min-width: 851px) {
+  .deliver-showcase > .deliver-card { cursor: pointer; }
   .deliver-card.is-popped { position: absolute; z-index: 7; border-color: #62d5ee; box-shadow: 0 22px 54px rgba(0, 0, 0, .6); }
   .deliver-slot { align-self: stretch; }
 }
@@ -322,6 +327,24 @@ dt { color: #97a9c1; font-size: 11px; } dd { margin: 0; font: 11px monospace; }
 .usecase[data-accent="relevance"] { --accent: #a97bff; }
 .usecase[data-accent="safety"] { --accent: #ffc24d; }
 .usecase[data-accent="discovery"] { --accent: #ff6f9c; }
+
+/* The trust band closes the deck the way cloudinary.com closes its homepage: the scale
+   numbers, then the analyst positions and G2 badges crawling past together in one track.
+   It reuses the Intro slide's crawler so both marquees behave identically. The stat spans
+   reset the label's mono/uppercase treatment, or they wrap onto a line each. */
+.usecases-trust { display: grid; gap: 14px; padding-top: 22px; border-top: 1px solid var(--line); }
+.slide .usecases-trust > .trust-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; max-width: none; margin: 0; color: #7f93ae; font: 10px monospace; letter-spacing: .12em; text-transform: uppercase; }
+.trust-label span { color: var(--muted); font: 11px Inter, sans-serif; letter-spacing: 0; text-transform: none; }
+.trust-label b { color: var(--cyan); font-size: 13px; font-weight: 600; }
+/* The badges are 92x106 originals, so the track is sized to their native height rather than
+   the square box the brand logos use -- anything taller would only upscale them. */
+.badge-track { gap: 20px; align-items: center; animation: badge-crawl 54s linear infinite; }
+.badge-track img { width: auto; height: 106px; }
+.analyst { display: grid; align-content: center; gap: 8px; width: 215px; height: 106px; flex: 0 0 auto; margin: 0; padding: 14px 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.analyst img { width: auto; max-width: 88px; height: 14px; object-fit: contain; object-position: left center; }
+.analyst figcaption { color: var(--muted); font-size: 11px; line-height: 1.42; }
+@keyframes badge-crawl { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 10px)); } }
+@media (prefers-reduced-motion: reduce) { .badge-track { animation: none; } }
 .flow { position: relative; }
 .connect-frame { min-height: 540px; display: grid; grid-template-rows: auto 1fr auto; }
 .connect-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 22px; background-image: linear-gradient(#7096d115 1px, transparent 1px), linear-gradient(90deg, #7096d115 1px, transparent 1px); background-size: 34px 34px; }
@@ -332,11 +355,5 @@ dt { color: #97a9c1; font-size: 11px; } dd { margin: 0; font: 11px monospace; }
 .connect-frame .connect-footer b { margin-right: 4px; color: var(--green); font-size: 13px; }
 .orchestrate-frame { min-height: 540px; }
 .orchestrate-frame .deliver-empty { min-height: 540px; }
-.orchestration-flow { min-height: 499px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; align-items: center; padding: 24px; background-image: linear-gradient(#7096d115 1px, transparent 1px), linear-gradient(90deg, #7096d115 1px, transparent 1px); background-size: 34px 34px; }
-.orchestration-step { position: relative; display: grid; align-content: start; gap: 9px; min-height: 235px; padding: 15px 13px; border: 1px solid #75b8ff55; border-radius: 9px; background: #05162eee; }
-.orchestration-step:not(:last-child)::after { position: absolute; z-index: 2; top: 50%; left: calc(100% + 7px); color: var(--cyan); content: "→"; font-size: 15px; transform: translateY(-50%); }
-.orchestration-step small { color: var(--cyan); font: 8px monospace; letter-spacing: .08em; }
-.orchestration-step strong { color: #fff; font-size: 11px; line-height: 1.3; }
-.orchestration-step p { margin: 0; color: #a8bad1; font-size: 9px; line-height: 1.55; }
 
-@media (max-width: 850px) { .title, header > nav, main { width: calc(100% - 40px); }.title { grid-template-columns: 1fr auto; }.usecases-grid { grid-template-columns: 1fr; }.usecases-slide { gap: 24px; }.title h1 { display: none; }.slide { height: auto; min-height: calc(100vh - 140px); grid-template-columns: minmax(0, 1fr); padding: 45px 0; }.intro-slide { padding-top: 35px; }.intro-outcomes { grid-template-columns: 1fr; }.intro-outcomes figure { height: 170px; }.intro-outcomes figure img { max-height: 170px; }.twocol { grid-template-columns: 1fr; }.enrich-embed, .transform-embed { height: 420px; }.generate-embed { height: 505px; }.connect-embed { height: 560px; }.inspector { display: none; }.orbit { height: 300px; }.orbit i:nth-child(3) { width: 480px; }.moderate-showcase { grid-template-columns: 1fr; }.moderate-preview { min-height: 280px; }.optimize-showcase { grid-template-columns: 1fr; height: auto; }.optimize-card > img { height: 300px; }.deliver-showcase { flex-wrap: wrap; align-items: flex-start; }.deliver-card.mobile, .deliver-card.square, .deliver-card.tablet, .deliver-card.desktop { flex-basis: calc(50% - 6px); }.connect-frame { min-height: auto; }.connect-grid { grid-template-columns: 1fr; }.connect-card img { max-height: 110px; }.orchestration-flow { grid-template-columns: 1fr; }.orchestration-step { min-height: auto; }.orchestration-step:not(:last-child)::after { top: auto; bottom: -21px; left: 50%; transform: translateX(-50%) rotate(90deg); }.cards { grid-template-columns: 1fr; }.grid { grid-template-rows: 180px 180px; }.devices > article { grid-template-columns: repeat(3, 1fr); gap: 9px; padding: 14px; }.devices img, .devices article > div:first-child img, .devices article > div:nth-child(2) img { height: 150px; }.asset-type-options { grid-template-columns: 1fr; }.asset-type-option { min-height: 82px; } }
+@media (max-width: 850px) { .title, header > nav, main { width: calc(100% - 40px); }.title { grid-template-columns: 1fr auto; }.usecases-grid { grid-template-columns: 1fr; }.usecases-slide { gap: 24px; }.title h1 { display: none; }.slide { height: auto; min-height: calc(100vh - 140px); grid-template-columns: minmax(0, 1fr); padding: 45px 0; }.intro-slide { padding-top: 35px; }.intro-outcomes { grid-template-columns: 1fr; }.intro-outcomes figure { height: 170px; }.intro-outcomes figure img { max-height: 170px; }.twocol { grid-template-columns: 1fr; }.enrich-embed, .transform-embed { height: 420px; }.generate-embed { height: 505px; }.connect-embed { height: 560px; }.inspector { display: none; }.orbit { height: 300px; }.orbit i:nth-child(3) { width: 480px; }.moderate-showcase { grid-template-columns: 1fr; }.moderate-preview { min-height: 280px; }.optimize-showcase { grid-template-columns: 1fr; height: auto; }.optimize-card > img { height: 300px; }.deliver-showcase { flex-wrap: wrap; align-items: flex-start; }.deliver-card.mobile, .deliver-card.square, .deliver-card.tablet, .deliver-card.desktop { flex-basis: calc(50% - 6px); }.connect-frame { min-height: auto; }.connect-grid { grid-template-columns: 1fr; }.connect-card img { max-height: 110px; }.orchestrate-embed { height: 620px; }.cards { grid-template-columns: 1fr; }.grid { grid-template-rows: 180px 180px; }.devices > article { grid-template-columns: repeat(3, 1fr); gap: 9px; padding: 14px; }.devices img, .devices article > div:first-child img, .devices article > div:nth-child(2) img { height: 150px; }.asset-type-options { grid-template-columns: 1fr; }.asset-type-option { min-height: 82px; } }

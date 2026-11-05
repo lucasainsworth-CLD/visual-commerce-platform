@@ -36,6 +36,12 @@ const examples = [
   }
 ];
 
+// Both lanes are labelled the same way wherever they appear - progress, results and
+// failures - and lead with the add-on that produced them, so the live run reads as the
+// same two add-ons the example badges name.
+const imageLaneLabel = 'Image Generation: same subject, new scene';
+const videoLaneLabel = 'Image to Video: four second subtle animation';
+
 const stage = document.querySelector('#stage');
 const deck = document.querySelector('#deck');
 const dots = document.querySelector('#dots');
@@ -58,6 +64,16 @@ function sizeDeck() {
   const mediaHeight = Math.round(Math.max(250, Math.min(stageHeight - 190, cardWidth * 1.1, 560)));
   deck.style.setProperty('--media-h', `${mediaHeight}px`);
   deck.style.setProperty('--card-w', `${cardWidth}px`);
+
+  // The live card carries the same motion as the examples but runs wider, because it is
+  // the one the prospect actually works in. Setting --card-w on the card itself is enough;
+  // it inherits --media-h from the deck so every state keeps the examples' height. Height
+  // is deliberately left alone: the review state already adds ~22px of its own chrome, and
+  // growing the body too would push the card under the deck controls.
+  const liveCard = deck.querySelector('#live-card');
+  if (liveCard) {
+    liveCard.style.setProperty('--card-w', `${Math.round(Math.min(cardWidth * 1.2, stageWidth - 28))}px`);
+  }
   return { cardWidth };
 }
 
@@ -67,13 +83,7 @@ function layout() {
   cards.forEach((card, index) => {
     const offset = index - active;
     const depth = offset === 0 ? 0 : -260 - (Math.abs(offset) - 1) * 80;
-    // The live card is where the prospect actually works, so it takes the whole
-    // frame instead of sitting at example size with the deck showing around it.
-    const full = offset === 0 && card.classList.contains('is-live');
-    card.classList.toggle('is-full', full);
-    card.style.transform = full
-      ? 'none'
-      : `translate(-50%, -50%) translateX(${offset * step}px) translateZ(${depth}px) rotateY(${offset * -28}deg) scale(${offset === 0 ? 1 : 0.8})`;
+    card.style.transform = `translate(-50%, -50%) translateX(${offset * step}px) translateZ(${depth}px) rotateY(${offset * -28}deg) scale(${offset === 0 ? 1 : 0.8})`;
     card.style.opacity = Math.abs(offset) > 2 ? '0' : String(1 - Math.abs(offset) * 0.22);
     card.style.zIndex = String(50 - Math.abs(offset));
     card.classList.toggle('is-active', offset === 0);
@@ -95,6 +105,7 @@ function exampleCard(item) {
     : `<img src="${item.result}" alt="${item.title}">`;
   card.innerHTML = `
     <div class="card-media">${media}
+      <span class="media-flag">EXAMPLE</span>
       <span class="card-source"><img src="${item.source}" alt="Source image"><small>SOURCE</small></span>
     </div>
     <span class="badge ${item.kind === 'video' ? 'is-video' : ''}">${item.label}</span>
@@ -146,14 +157,14 @@ function resultsMarkup() {
     </figure>`;
 
   if (live.image) {
-    panes.push(`<figure class="result"><img src="${live.image}" alt="Generated scene"><figcaption>New scene</figcaption></figure>`);
+    panes.push(`<figure class="result"><img src="${live.image}" alt="Generated scene"><figcaption>${imageLaneLabel}</figcaption></figure>`);
   } else if (live.imageError) {
-    panes.push(failed('New scene', live.imageError));
+    panes.push(failed(imageLaneLabel, live.imageError));
   }
   if (live.video) {
-    panes.push(`<figure class="result"><video autoplay muted loop playsinline><source src="${live.video}" type="video/mp4"></video><figcaption>Four-second clip</figcaption></figure>`);
+    panes.push(`<figure class="result"><video autoplay muted loop playsinline><source src="${live.video}" type="video/mp4"></video><figcaption>${videoLaneLabel}</figcaption></figure>`);
   } else if (live.videoError) {
-    panes.push(failed('Four-second clip', live.videoError));
+    panes.push(failed(videoLaneLabel, live.videoError));
   }
   return `<div class="results" data-panes="${panes.length}">${panes.join('')}
       <span class="card-source"><img src="${sourceThumb(asset.imageUrl)}" alt="Your source image"><small>SOURCE</small></span>
@@ -191,8 +202,8 @@ function renderLive() {
       <i class="spinner" aria-hidden="true"></i>
       <b>Generating</b>
       <div class="lanes">
-        <div class="lane ${live.image ? 'done' : ''}"><span>New scene</span><i>${live.image ? 'ready' : live.imageError ? 'failed' : 'working…'}</i></div>
-        <div class="lane ${live.video ? 'done' : ''}"><span>Four-second clip</span><i>${live.video ? 'ready' : live.videoError ? 'failed' : 'working…'}</i></div>
+        <div class="lane ${live.image ? 'done' : ''}"><span>${imageLaneLabel}</span><i>${live.image ? 'ready' : live.imageError ? 'failed' : 'working…'}</i></div>
+        <div class="lane ${live.video ? 'done' : ''}"><span>${videoLaneLabel}</span><i>${live.video ? 'ready' : live.videoError ? 'failed' : 'working…'}</i></div>
       </div>
       <span>Output is held for review before anything is published.</span>
     </div>`;

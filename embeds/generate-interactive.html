@@ -25,19 +25,17 @@
       .card-source { position: absolute; right: 9px; bottom: 9px; width: 74px; height: 74px; overflow: hidden; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
       .card-source img { width: 100%; height: 100%; object-fit: cover; }
       .card-source small { position: absolute; top: 0; left: 0; padding: 1px 4px; background: rgba(4,17,33,.82); color: #cfe6f7; font: 7px monospace; letter-spacing: .08em; }
+      .media-flag { position: absolute; top: 9px; left: 9px; z-index: 2; padding: 3px 7px; border: 1px solid rgba(207,230,247,.22); border-radius: 4px; background: rgba(4,17,33,.82); color: #cfe6f7; font: 8px monospace; letter-spacing: .13em; }
       .card h3 { margin: 12px 0 4px; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
       .card p { margin: 0; color: #9db3cd; font-size: 12px; line-height: 1.5; }
       .badge { display: inline-block; margin-bottom: 7px; padding: 2px 7px; border-radius: 4px; background: rgba(98,213,238,.16); color: #62d5ee; font: 8px monospace; letter-spacing: .13em; }
       .badge.is-video { background: rgba(169,123,255,.18); color: #c3a2ff; }
       .badge.is-live { background: rgba(88,221,161,.18); color: #58dda1; }
 
-      /* The live card fills the frame: it is the one the prospect works in. */
-      .card.is-full { top: 0; left: 0; display: flex; width: 100%; height: 100%; flex-direction: column; padding: 16px 16px 50px; border-radius: 12px; }
-      .card.is-full > :first-child { min-height: 0; flex: 1; }
-      .card.is-full .live-body, .card.is-full .results { height: auto; }
-      .card.is-full .live-body span { max-width: 420px; }
-      .card.is-full > .badge { align-self: flex-start; }
-      .card.is-full h3 { margin-top: 14px; }
+      /* The live card is the one the prospect works in, so it runs wider than the
+         examples while taking exactly the same carousel motion. sizeDeck() sets its
+         width as a --card-w override on the card itself. */
+      .card.is-live .live-body span { max-width: 380px; }
 
       .deck-nav { position: absolute; z-index: 60; bottom: 12px; left: 50%; display: flex; align-items: center; gap: 9px; transform: translateX(-50%); }
       .deck-nav button { display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid rgba(143,208,248,.3); border-radius: 50%; background: rgba(8,24,46,.8); color: #cfe6f7; cursor: pointer; font-size: 12px; line-height: 1; }
@@ -56,7 +54,8 @@
       .live-secondary:hover { color: #9fe8f7; }
       .spinner { width: 22px; height: 22px; border: 2px solid rgba(98,213,238,.25); border-top-color: #62d5ee; border-radius: 50%; animation: spin .8s linear infinite; }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .lanes { display: grid; gap: 6px; width: 100%; max-width: 300px; }
+      .lanes { display: grid; gap: 6px; width: 100%; max-width: 430px; }
+      .lane span { max-width: none; }
       .lane { display: flex; align-items: center; justify-content: space-between; padding: 6px 11px; border-radius: 6px; background: rgba(8,24,46,.72); font-size: 11.5px; }
       .lane i { font-style: normal; color: #8fa6c2; }
       .lane.done i { color: #58dda1; }
@@ -102,6 +101,6 @@
         <button type="button" id="next" aria-label="Next example">&#8250;</button>
       </nav>
     </main>
-    <script src="generate-interactive.js?v=11"></script>
+    <script src="generate-interactive.js?v=16"></script>
   </body>
 </html>
