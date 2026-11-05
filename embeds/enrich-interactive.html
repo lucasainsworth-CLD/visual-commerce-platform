@@ -32,7 +32,11 @@
       .cluster-controls { position: absolute; z-index: 4; bottom: 14px; left: 14px; display: flex; gap: 6px; }
       .cluster-controls button { padding: 6px 9px; border: 1px solid rgba(157, 188, 225, .42); border-radius: 999px; background: rgba(5, 23, 45, .9); color: #9fb6d4; font: 9px Inter, Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
       .cluster-controls button.active { border-color: #62d5ee; color: #e9f9ff; background: rgba(19, 93, 122, .85); }
+      .metadata-note { display: none; position: absolute; z-index: 4; right: 14px; bottom: 14px; width: min(290px, 42%); padding: 14px 16px; border: 1px solid rgba(98, 213, 238, .55); border-radius: 9px; background: rgba(5, 23, 45, .94); box-shadow: 0 10px 28px rgba(0, 0, 0, .24); color: #d5e7f3; pointer-events: none; }
+      .metadata-note b { display: block; margin-bottom: 7px; color: #e9f9ff; font-size: 13px; line-height: 1.35; }
+      .metadata-note p { margin: 0; font-size: 11px; line-height: 1.5; }
       .stage.ready .asset { opacity: 1; }
+      .stage.ready .metadata-note { display: block; }
       .stage.ready .empty, .stage.ready .loading { display: none; }
       .stage.loading .empty { display: none; }
       .stage.loading .loading { display: grid; }
@@ -46,6 +50,10 @@
       <div class="asset"><img id="asset-image" alt="Selected asset"></div>
       <svg id="leaders" class="leaders" aria-hidden="true"></svg>
       <div id="callouts" class="callouts"></div>
+      <aside class="metadata-note" aria-label="Structured metadata">
+        <b>Structured Metadata supports your brand.</b>
+        <p>Set custom fields and rules applied to all assets. SKU, sizing, rights and more can be preset, prompted on upload, or set automatically based on your own naming convention.</p>
+      </aside>
       <div class="cluster-controls" aria-label="Enrichment data view">
         <button class="active" data-view="all">All</button>
         <button data-view="tag">Tags</button>

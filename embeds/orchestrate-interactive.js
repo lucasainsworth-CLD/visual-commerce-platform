@@ -30,15 +30,14 @@ const icons = {
 
 const trigger = {
   id: 'trigger',
-  label: 'On Asset Upload',
+  label: 'When an asset is uploaded...',
   kicker: 'Flow starts',
   category: 'Trigger',
   tone: tone.trigger,
   icon: icons.upload,
-  title: 'One upload starts everything',
-  body: 'The flow is scoped to the demo folder, so only assets landing there run it. Every upload you made in this demo fired this trigger before the page had finished rendering the thumbnail.',
-  rows: [['Scope', 'demo asset folder'], ['Resource type', 'image'], ['Fan-out', '2 parallel branches']],
-  aside: 'Nothing here is scheduled or polled. The asset arriving is the event.'
+  title: 'Upload starts the flow',
+  body: 'Images uploaded to the demo folder start two parallel branches.',
+  rows: [['Scope', 'demo asset folder'], ['Branches', '2']]
 };
 
 const branches = [
@@ -49,27 +48,25 @@ const branches = [
     nodes: [
       {
         id: 'update-tags',
-        label: 'Update Tags',
+        label: 'Assign category tags',
         kicker: 'Media management',
         category: 'Media management',
         tone: tone.manage,
         icon: icons.tag,
-        title: 'Category tags land before AI runs',
-        body: 'The image category chosen at upload decides which tag set and which structured metadata are written. This happens first, so every later block -- and every later moderation rule -- can read the category off the asset.',
-        rows: [['Lifestyle Shot', 'lifestyle, look-book, campaign…'], ['Product Shot', 'product, SKU-lookup, catalog…'], ['UGC / Creator', 'creator, UGC, review…'], ['Travel & Hospitality', 'travel, destination, hospitality…']],
-        aside: 'Product shots also get their SKU written into structured metadata, which is what makes a PIM lookup possible later.'
+        title: 'Apply category tags',
+        body: 'The upload category has pre-assigned tags and metadata that are applied first.',
+        rows: [['Also stores', 'Asset Subject'], ['Product shots', 'SKU']]
       },
       {
         id: 'tag-ai',
-        label: 'Tag Image Using AI',
+        label: 'Use AI to assign additional tags.',
         kicker: 'AI media enrichment',
         category: 'AI media enrichment',
         tone: tone.ai,
         icon: icons.ai,
-        title: 'Only confident tags are kept',
-        body: 'The AI returns every tag it can see with a confidence score. The flow keeps the ones at or above 75% and discards the rest, so the library fills with tags a merchandiser would agree with rather than everything the model guessed.',
-        rows: [['Confidence floor', '≥ 0.75'], ['Below the floor', 'discarded'], ['Written to', 'asset tags']],
-        aside: 'This threshold is the dial worth arguing about in a workshop: raise it for a tighter library, lower it for wider recall.'
+        title: 'Adjustable confidence level for auto-apply',
+        body: 'For this demo, tags with an AI confidence of 75% or above are automatically applied.',
+        rows: [['Threshold', '≥ 0.75'], ['Saved as', 'asset tags']]
       },
       {
         id: 'alt-text',
@@ -78,52 +75,49 @@ const branches = [
         category: 'AI media enrichment',
         tone: tone.ai,
         icon: icons.alt,
-        title: 'Accessibility stops being a backlog',
-        body: 'A written description is generated from the image itself and stored on the asset, so the storefront has alt text the moment the image exists -- not whenever someone gets round to the accessibility ticket.',
-        rows: [['Stored in', 'contextual metadata'], ['Covers', 'every uploaded asset'], ['Manual effort', 'none']],
-        aside: 'You saw this one land on the Enrich stage: the description beside your image was written by this block.'
+        title: 'Generate image descriptions',
+        body: 'AI writes a description of the image as alt text to the asset’s contextual metadata.',
+        rows: [['Field', 'Description (alt)']]
       }
     ]
   },
   {
     name: 'Branch 2',
-    purpose: 'Make it safe',
+    purpose: 'Automatic content moderation',
     tone: tone.analysis,
     nodes: [
       {
         id: 'branch-condition',
-        label: 'Branch On Condition',
+        label: 'Choose moderation rules based on asset category',
         kicker: 'Flow logic',
         category: 'Flow logic',
         tone: tone.logic,
         icon: icons.branch,
-        title: 'The category picks the rulebook',
-        body: 'This block reads the structured metadata written a moment earlier and sends the asset down a different moderation path for each category. One flow, four rulebooks -- no separate pipeline per content type.',
-        rows: [['Reads', 'asset_subject_'], ['Paths', '4 (one per category)'], ['Default', 'no path, no moderation']],
-        aside: 'This is the block that makes a single flow serve a product team and a UGC team at once.'
+        title: 'Moderation job triggered on upload by asset category',
+        body: 'Four "ongoing moderation" jobs with custom rules for Product Images, Lifestyle Images, UGC / Creator uploads, and Travel and Hospitality imges check for new uploads matching their category tag. The results are automatically written to structured metadata.',
+        rows: [['Reads', 'asset_subject_'], ['Paths', '4']]
       },
       {
         id: 'moderate',
-        label: 'Moderate Image Using Custom Rules',
+        label: 'Moderate image and assign results to asset metadata.',
         kicker: 'Media analysis',
         category: 'Media analysis',
         tone: tone.analysis,
         icon: icons.shield,
-        title: 'Different content, different questions',
-        body: 'Each category is checked against the rules that actually matter for it. A packshot is asked whether its background is clean and its product centred; a creator contribution is asked whether it is safe for work and original.',
-        rows: [['Lifestyle Shot', '5 rules · people, logos, quality…'], ['Product Shot', '4 rules · background, centring…'], ['UGC / Creator', '5 rules · SFW, originality…'], ['Travel & Hospitality', '5 rules · AI-generated, subject…']],
-        aside: 'The Moderate stage you just saw was reading the result of this block, rule by rule.'
+        title: 'Run category-specific checks',
+        body: 'Each category runs its own moderation rules.',
+        rows: [['Lifestyle', '5 checks'], ['Product', '4 checks'], ['Creator', '5 checks'], ['Travel', '5 checks']]
       },
       {
         id: 'notify',
-        label: 'Send A Notification',
+        label: 'Send a notification, or trigger another action',
         kicker: 'Notifications',
         category: 'Notifications',
         tone: tone.dev,
         icon: icons.bell,
-        title: 'Email, Slack, you name it.',
-        body: 'Set custom rules, collet messages into a weekly digest, or send slack pings for hihg-importance issues.',
-        rows: [['On pass', 'continue silently'], ['On failure', 'Slack / email + asset'], ['Carries', 'the failed rule']],
+        title: 'Notify on failed checks',
+        body: 'Send Slack or email alerts with the asset and failed rule.',
+        rows: [['On pass', 'continue'], ['On failure', 'alert or review']],
         aside: ''
       }
     ]
@@ -137,9 +131,9 @@ const downstream = [
     category: 'Delivery on-demand',
     tone: tone.beyond,
     icon: icons.wand,
-    title: 'Transformations are built when they are requested',
-    body: 'Every crop, format and quality variant is produced the first time a URL is requested and then cached at the edge. A new breakpoint is as easy as a URL change.',
-    rows: [['Trigger', 'the first request'], ['Then', 'cached on the CDN'], ['New format', 'change the URL']],
+    title: 'Transform on request',
+    body: 'Crops, formats, and quality variants are generated on first request and cached at the edge.',
+    rows: [['Controls', 'URL parameters'], ['Cache', 'CDN edge']],
     aside: ''
   },
   {
@@ -148,9 +142,9 @@ const downstream = [
     category: 'Storage · PIM · commerce',
     tone: tone.manage,
     icon: icons.plug,
-    title: 'Partner Integrations',
-    body: 'MediaFlows can publish finished assets into the systems the business already runs on.',
-    rows: [['Connectors', '75+ pre-built'], ['Also', 'APIs and MCPs'], ['Direction', 'in and out']],
+    title: 'Connect your systems',
+    body: 'Sync assets to commerce, PIM, and CMS platforms.',
+    rows: [['Connectors', '75+ pre-built'], ['Also', 'APIs and MCPs']],
     aside: ''
   },
   {
@@ -159,10 +153,10 @@ const downstream = [
     category: 'Media management',
     tone: tone.manage,
     icon: icons.normalize,
-    title: 'Normalization',
-    body: 'Contributed media arrives at every size, color crop. Normalization prepares your assets for e-commerce',
-    rows: [['Applies', 'brand baseline'], ['Typical use', 'UGC and partner feeds'], ['Runs', 'before publication']],
-    aside: 'A rejected image can be normalized and re-checked instead of simply thrown away.'
+    title: 'Normalize contributed images',
+    body: 'Apply brand size, crop, and color rules before publication.',
+    rows: [['For', 'UGC and partner feeds']],
+    aside: 'Failed assets can be corrected and rechecked.'
   },
   {
     id: 'channels',
@@ -170,10 +164,9 @@ const downstream = [
     category: 'Marketing & productivity',
     tone: tone.ai,
     icon: icons.channels,
-    title: 'Every channel gets its own cut',
-    body: 'Each destination has its own aspect ratios, file-size ceilings and naming rules. A flow can check an asset against a channel\'s requirements and produce the renditions it needs, so a launch does not wait on a design queue.',
-    rows: [['Checked', 'ratio, size, format'], ['Produces', 'per-channel renditions'], ['Blocks', 'on failure']],
-    aside: 'The Deliver stage showed four of these renditions side by side.'
+    title: 'Prepare channel variants',
+    body: 'Check size, ratio, and format requirements. Create matching renditions.',
+    rows: [['Checks', 'ratio, size, format'], ['Output', 'channel renditions']],
   },
   
 ];
@@ -297,10 +290,10 @@ addEventListener('message', (event) => {
   if (data.type !== 'orchestrate:decision') return;
   const item = byId.get('notify');
   item.aside = data.decision === 'approved'
-    ? 'In this run the generated output was approved, so the workflow carried on to delivery without anyone being paged.'
+    ? 'Generated output approved; continue to delivery.'
     : data.decision === 'rejected'
-      ? 'In this run the generated output was rejected, so nothing was published and the request went back to the queue.'
-      : 'This is where the headcount argument lives: review queues shrink to the exceptions.';
+      ? 'Generated output rejected; hold publication.'
+      : 'Alerts and review queues handle exceptions.';
   if (openId === 'notify') open('notify');
 });
 
