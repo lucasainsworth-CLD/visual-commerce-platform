@@ -15,13 +15,15 @@ const examples = [
   },
   {
     kind: 'image', label: 'IMAGE GENERATION',
+    sampleSubject: 'lifestyle_shot',
     title: 'Campaign model, new location',
     copy: 'The same subject and styling relocated to a different environment, without rebooking the shoot.',
-    result: img('v1793394511/fnrfhhlgxsuzoi4omg7z.png', 640),
-    source: img('lsi1nr9n4xvwldut6opg', 160)
+    result: img('v1793909974/jcjvejcefgok5iwyvfwn.png', 640),
+    source: img('v1793909853/fovsrzqxc7pa7p96ocyg.jpg', 160)
   },
   {
     kind: 'image', label: 'IMAGE GENERATION',
+    sampleSubject: 'sqeyaugdmr39vxwznqxa',
     title: 'Property scene, brought to life',
     copy: 'A guest added to an empty space, framed so the architecture stays exactly as photographed.',
     result: img('v1793394475/gkpblp25wkekamtfnfkg.png', 640),
@@ -29,6 +31,7 @@ const examples = [
   },
   {
     kind: 'video', label: 'IMAGE TO VIDEO',
+    sampleSubject: 'product_shot',
     title: 'Still product, four seconds of motion',
     copy: 'A 720p clip generated from a single still - no studio, no camera crew, no edit suite.',
     result: vid('v1793393250/image-to-video/i2v_f6d2daf3c46747aca2b2389916d72426.mp4'),
@@ -47,6 +50,7 @@ const deck = document.querySelector('#deck');
 const dots = document.querySelector('#dots');
 let cards = [];
 let active = 0;
+let displayedFeaturedExample = null;
 let asset = null;       // { imageUrl, assetId, subject }
 let endpoints = null;   // { image, video }
 let live = { state: 'idle' };
@@ -323,10 +327,17 @@ function settle() {
   renderLive();
 }
 
+function featuredExampleForAsset() {
+  return asset?.isSample ? examples.find((item) => item.sampleSubject === asset.subject) : undefined;
+}
+
 function build() {
   deck.replaceChildren();
   dots.replaceChildren();
-  cards = examples.map((item) => {
+  const featured = featuredExampleForAsset();
+  displayedFeaturedExample = featured || null;
+  const orderedExamples = featured ? [featured, ...examples.filter((item) => item !== featured)] : examples;
+  cards = orderedExamples.map((item) => {
     const card = exampleCard(item);
     deck.append(card);
     return card;
@@ -364,7 +375,7 @@ addEventListener('message', (event) => {
     asset = { imageUrl: data.imageUrl, assetId: data.assetId, subject: data.subject, isSample: data.isSample };
     endpoints = data.endpoints;
     if (changed) { clearTimeout(pollTimer); live = { state: 'idle' }; }
-    if (!cards.length) build(); else renderLive();
+    if (changed || displayedFeaturedExample !== (featuredExampleForAsset() || null)) build(); else renderLive();
     stage.classList.add('ready');
   }
 });

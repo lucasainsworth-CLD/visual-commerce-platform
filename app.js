@@ -77,8 +77,8 @@ const lifecycleLabels = {
 const lifecycleTimers = new Map();
 const sampleAssets = {
   lifestyle: {
-    source: 'https://res.cloudinary.com/demohost/image/upload/v1793289865/lsi1nr9n4xvwldut6opg.jpg',
-    publicId: 'lsi1nr9n4xvwldut6opg',
+    source: 'https://res.cloudinary.com/demohost/image/upload/v1793909853/fovsrzqxc7pa7p96ocyg.jpg',
+    publicId: 'fovsrzqxc7pa7p96ocyg',
     format: 'jpg',
     label: 'Lifestyle campaign image'
   },

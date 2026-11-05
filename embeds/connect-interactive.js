@@ -23,8 +23,11 @@ const categories = [
     label: 'DESIGN / CMS',
     logos: [
       { name: 'Adobe Creative Cloud', file: 'adobe', href: integration('adobe') },
-      { name: 'Contentful', file: 'contentful', href: integration('contentful') },
-      { name: 'WordPress', file: 'wordpress' }
+      { name: 'Figma', file: 'figma', href: integration('figma') },
+      { name: 'Canva', file: 'canva', href: integration('canva') },
+      { name: 'Contentstack', file: 'contentstack', href: integration('contentstack') },
+      { name: 'WordPress', file: 'wordpress' },
+      { name: 'Contentful', file: 'contentful', href: integration('contentful') }
     ]
   },
   {
@@ -125,7 +128,7 @@ function layout(card, fan, nodes) {
 
   const chip = open
     ? Math.max(56, Math.min(78, width / 3.2))
-    : Math.max(40, Math.min(54, width / 4.6));
+    : Math.max(48, Math.min(65, width / 3.83));
   const half = chip / 2;
 
   // Logo centres are positioned in fan-local pixels; these are the limits that keep a
@@ -141,7 +144,14 @@ function layout(card, fan, nodes) {
   const perRow = Math.ceil(count / rows);
   const centerX = width / 2;
   const centerY = height / 2;
-  const rowGap = Math.min(chip * 1.3, Math.max(chip * 0.95, height / (rows + 0.25)));
+  // Two rows of open chips are taller than the fan, so the stack has to break downward out
+  // of the card. Anchoring it and stepping by rowGap is what keeps the rows apart: deriving
+  // each row from the centre let the minY clamp squeeze the gap shut against the card label.
+  const rowRoom = rows > 1 ? Math.max(chip * 1.02, maxY - minY) : Infinity;
+  const rowGap = Math.min(chip * 1.3, Math.max(chip * 1.12, height / (rows + 0.25)), rowRoom);
+  const stack = (rows - 1) * rowGap;
+  const firstRowY = Math.max(minY, Math.min(centerY - stack / 2, maxY - stack));
+  const arc = Math.min(12, chip * 0.2, rows > 1 ? Math.max(0, rowGap - chip - 4) : Infinity);
 
   for (let row = 0; row < rows; row += 1) {
     const rowNodes = nodes.slice(row * perRow, row * perRow + perRow);
@@ -157,11 +167,13 @@ function layout(card, fan, nodes) {
     rowNodes.forEach((node, i) => {
       const index = row * perRow + i;
       let x = left + i * step;
-      let y = centerY + (row - (rows - 1) / 2) * rowGap;
-      // A slight arc so a row reads as a fan rather than a table.
+      let y = firstRowY + row * rowGap;
+      // A slight arc so a row reads as a fan rather than a table. It is capped by whatever
+      // clearance is left between the rows: at full strength a lifted middle chip rises
+      // into the row above it, which is what made larger chips collide.
       if (n > 2) {
         const t = (i / (n - 1)) * 2 - 1;
-        y -= (1 - t * t) * Math.min(12, chip * 0.2);
+        y -= (1 - t * t) * arc;
       }
       node.style.setProperty('--chip', `${Math.round(chip)}px`);
       node.style.left = `${Math.round(x)}px`;
