@@ -329,6 +329,22 @@ dt { color: #97a9c1; font-size: 11px; } dd { margin: 0; font: 11px monospace; }
 .usecase[data-accent="relevance"] { --accent: #a97bff; }
 .usecase[data-accent="safety"] { --accent: #ffc24d; }
 .usecase[data-accent="discovery"] { --accent: #ff6f9c; }
+.customer-story { gap: 0; overflow: hidden; padding: 0 0 22px; color: inherit; text-decoration: none; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.customer-story-visual { position: relative; display: block; height: 174px; margin-bottom: 18px; overflow: hidden; background: #172236; }
+.customer-story-visual .scene { display: block; width: 100%; height: 100%; object-fit: cover; }
+.customer-story-visual .brand { position: absolute; top: 13px; left: 14px; width: 35%; height: 48px; object-fit: contain; object-position: left top; }
+.customer-story-visual.is-bogg { background: linear-gradient(130deg, #e9f4ff, #a8cce8); }
+.customer-story-visual.is-bogg .scene { width: 78%; margin-left: auto; object-fit: contain; object-position: right center; }
+.customer-story-visual.is-bogg .brand { width: 29%; height: 62px; }
+.customer-story > small, .customer-story > strong, .customer-story > p { margin-right: 22px; margin-left: 22px; }
+.customer-story > small, .customer-story > strong { margin-bottom: 8px; }
+.customer-story:hover { border-color: var(--accent); background: #111d34; transform: translateY(-2px); }
+.customer-story:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.customer-story p b { color: var(--accent); font-weight: 600; }
+.customer-stories-footer { justify-items: start; }
+.customer-stories-footer > a { color: var(--cyan); font-size: 15px; font-weight: 600; text-decoration: none; }
+.customer-stories-footer > a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.customer-stories-footer > a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 
 /* The trust band closes the deck the way cloudinary.com closes its homepage: the scale
    numbers, then the analyst positions and G2 badges crawling past together in one track.

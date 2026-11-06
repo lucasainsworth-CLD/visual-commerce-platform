@@ -1,5 +1,5 @@
-const ids = ['intro', 'ingest', 'enrich', 'generate', 'transform', 'moderate', 'connect', 'optimize', 'deliver', 'orchestrate', 'usecases'];
-const names = ['Intro', '1 Ingest', '2 Enrich', '3 Generate', '4 Transform', '5 Moderate', '6 Connect', '7 Optimize', '8 Deliver', '9 Orchestrate', 'Use cases'];
+const ids = ['intro', 'ingest', 'enrich', 'generate', 'transform', 'moderate', 'connect', 'optimize', 'deliver', 'orchestrate', 'usecases', 'customers'];
+const names = ['Intro', '1 Ingest', '2 Enrich', '3 Generate', '4 Transform', '5 Moderate', '6 Connect', '7 Optimize', '8 Deliver', '9 Orchestrate', 'Use cases', 'Customers'];
 const config = window.LIFECYCLE_DEMO_CONFIG || {};
 const uploadPresets = config.uploadPresets || { lifestyle: config.uploadPreset };
 const structuredMetadataField = config.structuredMetadataField || 'asset_subject_';
@@ -114,7 +114,7 @@ function setCanvasBusy(stage, busy, message) {
 
 function setLifecycleStatus(stage, status) {
   lifecycleStatus[stage] = status;
-  const link = document.querySelector(`nav a[href="#${stage}"]`);
+  const link = document.querySelector(`.lifecycle-flow a[href="#${stage}"]`);
   if (!link) return;
   link.dataset.lifecycleStatus = status;
   link.dataset.lifecycleGlow = status;
@@ -227,7 +227,7 @@ function go(index) {
     document.querySelector(`a[href="#${id}"]`).classList.toggle('active', itemIndex === activeIndex);
   });
   const counter = $('#counter');
-  if (counter) counter.textContent = names[activeIndex] + ' of ' + (ids.length - 2);
+  if (counter) counter.textContent = names[activeIndex] + ' of ' + (ids.length - 3);
   history.replaceState(null, '', '#' + ids[activeIndex]);
   requestAnimationFrame(() => {
     if (ids[activeIndex] === 'enrich') syncEnrichVisual();
