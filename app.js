@@ -465,7 +465,8 @@ function syncEnrichVisual() {
 
   if (!selectedAsset) {
     enrichImageSize = null;
-    frame.style.height = '540px';
+    // Clearing the override returns every stage to the shared empty height.
+    document.documentElement.style.removeProperty('--stage-h');
     frame.contentWindow.postMessage({ type: 'enrich:empty' }, location.origin);
     return;
   }
@@ -484,9 +485,10 @@ function syncEnrichVisual() {
 
 let enrichImageSize = null;
 
-// Enrich sizes itself to the asset's aspect ratio. Transform and Generate adopt the
-// same height so the three stages stay level and their content gets the same room.
-const stageFrames = ['#enrich-visual', '#transform-visual', '#generate-visual'];
+// Enrich sizes itself to the asset's aspect ratio. Every other embed adopts the same
+// height through --stage-h, so all tabs stay level and get the same room.
+const stageFrames = ['#enrich-visual', '#transform-visual', '#generate-visual', '#connect-visual', '#orchestrate-visual'];
+const STAGE_MIN = 620, STAGE_MAX = 900;
 
 function resizeEnrichVisual(width, height) {
   if (!width || !height) return;
@@ -508,21 +510,16 @@ function stageFrameWidth() {
 }
 
 function applyStageHeight() {
-  const frame = $('#enrich-visual');
-  if (!frame) return;
   // Below the breakpoint the stylesheet sets per-stage heights; leave those alone.
   if (!matchMedia('(min-width: 851px)').matches) {
-    stageFrames.forEach((selector) => { const node = $(selector); if (node) node.style.removeProperty('height'); });
+    document.documentElement.style.removeProperty('--stage-h');
     return;
   }
   const frameWidth = stageFrameWidth();
   if (!enrichImageSize || !frameWidth) return;
   const target = frameWidth * (enrichImageSize.height / enrichImageSize.width);
-  const height = Math.round(Math.min(900, Math.max(540, target)));
-  stageFrames.forEach((selector) => {
-    const node = $(selector);
-    if (node) node.style.height = `${height}px`;
-  });
+  const height = Math.round(Math.min(STAGE_MAX, Math.max(STAGE_MIN, target)));
+  document.documentElement.style.setProperty('--stage-h', `${height}px`);
 }
 
 function syncTransformVisual() {
@@ -1002,7 +999,7 @@ const connectVisual = $('#connect-visual');
 const connectExperienceToggle = $('#connect-experience-toggle');
 let connectExperience = 'ecosystem';
 const connectExperienceUrls = {
-  ecosystem: 'embeds/connect-ecosystem/connect.html?v=20261110-1',
+  ecosystem: 'embeds/connect-ecosystem/connect.html?v=20261111-2',
   classic: 'embeds/connect-interactive.html?v=20261105-5'
 };
 connectExperienceToggle.onclick = () => {

@@ -7,9 +7,12 @@
   const CONFIG = {
     integrations: ['./data/cloudinary-integrations.csv', './data/integrations.csv'],
     ecosystem: './data/ecosystem.csv', taxonomy: './data/taxonomy.csv', view: 'default',
+    // Bump when a CSV changes: a cached copy of an older shape fails the column
+    // check and silently falls back to prettified category ids.
+    dataVersion: '20261111-1',
     three: 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js',
     presetZoom: { ecosystem:1.44, prebuilt:1.2, custom:1.08 },
-    zoomLimits: { min:.65, max:2.22 }
+    focusZoom: 3, zoomLimits: { min:.65, max:3.4 }
   };
   const $ = id => document.getElementById(id);
   const root = $('galaxy');
@@ -25,18 +28,10 @@
     try { const url = new URL(input); return /^(https?:)$/.test(url.protocol) ? url.href : null; }
     catch { return null; }
   };
-  function plainText(text) {
-    if (!text.trimStart().startsWith('{\\rtf')) return text.replace(/^\uFEFF/,'');
-    const start = text.search(/(?:id,name,category|view_id,category_id)/);
-    if (start < 0) throw new Error('CSV header missing in rich-text template.');
-    return text.slice(start).replace(/\\\r?\n/g,'\n').replace(/\\par\b\s?/g,'\n')
-      .replace(/\\'([0-9a-f]{2})/gi,(_,hex)=>String.fromCharCode(parseInt(hex,16)))
-      .replace(/\\([{}\\])/g,'$1').replace(/}\s*$/,'').trim();
-  }
   async function csv(path, columns) {
-    const response = await fetch(path);
+    const response = await fetch(`${path}?v=${CONFIG.dataVersion}`);
     if (!response.ok) throw new Error(`${path}: ${response.status}`);
-    const rows = d3.csvParse(plainText(await response.text()));
+    const rows = d3.csvParse((await response.text()).replace(/^\uFEFF/,''));
     if (!columns.every(c=>rows.columns.includes(c))) throw new Error(`${path}: missing columns`);
     return rows.filter(row=>row.name || row.category_id);
   }
@@ -306,6 +301,10 @@
     let lastTime=performance.now(),lastInteraction=lastTime,hovered=null,selected=null,keyboardFocus=null;
     let shown=true,raf=0,destroyed=false;
     let activeGroup=null,hoverCategory=null,focusCategory=null,categoryClearTimer=0;
+    // The ecosystem view centers a clicked region by panning the galaxy, so the
+    // region's own stars stay put in 3D and rotation keeps working while zoomed.
+    let labelGroup=null,nameRevealFrames=0,nameClearTimer=0;
+    const focusPan=new THREE.Vector3(),focusPanTarget=new THREE.Vector3(),panned=new THREE.Vector3();
     const nameLayer=document.createElement('div');nameLayer.id='category-names';
     root.append(nameLayer);
     $('labels').removeAttribute('aria-hidden');$('labels').setAttribute('role','group');$('labels').setAttribute('aria-label','Categories');
@@ -354,12 +353,14 @@
       label.addEventListener('pointerleave',scheduleCategoryClear);
       label.addEventListener('focus',()=>{focusCategory=group.id;refreshCategory();interact();});
       label.addEventListener('blur',()=>{focusCategory=null;scheduleCategoryClear();});
-      label.addEventListener('click',()=>{focusCategory=group.id;refreshCategory();});
+      label.addEventListener('click',()=>focusRegion(group.id));
       label.style.color='#'+group.color.getHexString();label.dataset.category=group.id;
       const text=document.createElement('span');text.textContent=group.label;label.append(text);
       $('labels').append(label);group.element=label;
     });
     function setCategoryHover(id){
+      // State 1 reveals names on click, so hovering must not open a region there.
+      if(mode==='ecosystem')return;
       clearTimeout(categoryClearTimer);hoverCategory=groupById.has(id)?id:null;refreshCategory();
     }
     function scheduleCategoryClear(){
@@ -369,25 +370,53 @@
     function clearCategory(){
       clearTimeout(categoryClearTimer);hoverCategory=null;focusCategory=null;refreshCategory();
     }
+    // Regions have no geometry of their own, so a click lands in one by falling
+    // inside its members' screen bounds; ties go to the nearest center.
+    function regionAt(clientX,clientY){
+      const rect=root.getBoundingClientRect(),x=clientX-rect.x,y=clientY-rect.y;
+      const candidates=groups.filter(group=>group.hoverBounds&&x>=group.hoverBounds.left&&x<=group.hoverBounds.right&&y>=group.hoverBounds.top&&y<=group.hoverBounds.bottom);
+      candidates.sort((a,b)=>Math.hypot(x-a.hoverBounds.cx,y-a.hoverBounds.cy)-Math.hypot(x-b.hoverBounds.cx,y-b.hoverBounds.cy));
+      return candidates[0]||null;
+    }
+    function focusRegion(id){
+      if(!groupById.has(id))return;
+      focusCategory=id;refreshCategory();
+      focusPanTarget.copy(groupById.get(id).center);
+      targetZoom=CONFIG.focusZoom;targetYaw=0;targetPitch=-.12;interact();
+    }
+    function clearFocus(){
+      clearCategory();focusPanTarget.set(0,0,0);targetZoom=CONFIG.presetZoom[mode];interact();
+    }
     function refreshCategory(){
       const next=groupById.get(hoverCategory||focusCategory)||null;
       if(next===activeGroup)return;
       activeGroup=next;root.dataset.activeCategory=next?.id||'';
       groups.forEach(group=>{group.element?.classList.toggle('active',group===next);group.element?.setAttribute('aria-expanded',String(group===next));});
       companies.forEach(company=>company.element.classList.toggle('category-active',company.group===next));
-      nameLayer.replaceChildren();
-      if(!next)return;
+      clearTimeout(nameClearTimer);
+      if(!next){
+        // Keep the labels in the DOM, and still laid out, so they fade out in place
+        // instead of vanishing the instant the region closes.
+        nameLayer.classList.remove('is-visible');
+        nameClearTimer=setTimeout(()=>{if(!activeGroup){nameLayer.replaceChildren();labelGroup=null;}},420);
+        return;
+      }
+      nameLayer.replaceChildren();nameLayer.classList.remove('is-visible');
       next.members.forEach(company=>{
         const label=document.createElement('span');label.className='category-name';
         label.textContent=company.name;label.dataset.categoryName=company.id;
         nameLayer.append(label);company.categoryLabel=label;
       });
+      labelGroup=next;
+      // Reveal a frame later, once the labels have been positioned and painted at
+      // opacity 0 — otherwise the browser has nothing to transition from.
+      nameRevealFrames=2;
     }
     // Labels stay at a fixed offset from their projected star. No cards, leaders,
     // collision avoidance or independent fan-out; overlaps are intentional.
     function layoutCategoryNames(){
-      if(!activeGroup)return;
-      activeGroup.members.forEach(company=>{
+      if(!labelGroup)return;
+      labelGroup.members.forEach(company=>{
         const label=company.categoryLabel,point=company.screen;
         label.hidden=company.element.style.display==='none';
         const leftSide=point.x>width*.68;
@@ -426,7 +455,7 @@
     }
     $('close-detail').addEventListener('click',()=>closeDetail(true));
     function interact(){lastInteraction=performance.now();root.classList.add('interacted');}
-    function home(){targetYaw=0;targetPitch=-.12;targetZoom=CONFIG.presetZoom[mode];interact();}
+    function home(){targetYaw=0;targetPitch=-.12;targetZoom=CONFIG.presetZoom[mode];focusPanTarget.set(0,0,0);interact();}
     function setMode(next) {
       if(!Object.hasOwn(CONFIG.presetZoom,next))return;
       if(next===mode&&next!=='ecosystem'){home();return;}
@@ -472,28 +501,41 @@
     function endPointer(event,cancelled=false){
       if(!pointers.has(event.pointerId))return;
       pointers.delete(event.pointerId);
-      if(pointers.size===0&&gesture){if(!cancelled&&!gesture.moved){if(gesture.company)openDetail(gesture.company);else closeDetail();}gesture=null;}
+      if(pointers.size===0&&gesture){
+        if(!cancelled&&!gesture.moved){
+          if(gesture.company)openDetail(gesture.company);
+          else{
+            closeDetail();
+            // A click inside a region opens it; a click on open space reverses both
+            // the zoom and the names. Name labels do not take the pointer, so a
+            // click on one lands in its own region and keeps it open.
+            if(mode==='ecosystem'){const region=regionAt(event.clientX,event.clientY);region?focusRegion(region.id):clearFocus();}
+          }
+        }
+        gesture=null;
+      }
       else if(gesture){const p=[...pointers.values()][0];gesture.x=p.x;gesture.y=p.y;gesture.moved=true;}
     }
     root.addEventListener('pointerup',event=>endPointer(event));
     root.addEventListener('pointercancel',event=>endPointer(event,true));
     root.addEventListener('pointermove',event=>{
+      if(mode==='ecosystem')return;
       if(gesture?.moved){setCategoryHover(null);return;}
       const direct=event.target.closest?.('[data-category],.company');
       const id=direct?.dataset.category||direct?.dataset.section;
       if(id){setCategoryHover(id);return;}
       if(event.target.closest?.('nav,.view-controls,#detail')){scheduleCategoryClear();return;}
-      const rect=root.getBoundingClientRect(),x=event.clientX-rect.x,y=event.clientY-rect.y;
-      const candidates=groups.filter(group=>group.hoverBounds&&x>=group.hoverBounds.left&&x<=group.hoverBounds.right&&y>=group.hoverBounds.top&&y<=group.hoverBounds.bottom);
-      candidates.sort((a,b)=>Math.hypot(x-a.hoverBounds.cx,y-a.hoverBounds.cy)-Math.hypot(x-b.hoverBounds.cx,y-b.hoverBounds.cy));
-      if(candidates.length)setCategoryHover(candidates[0].id);else scheduleCategoryClear();
+      const region=regionAt(event.clientX,event.clientY);
+      if(region)setCategoryHover(region.id);else scheduleCategoryClear();
     });
     root.addEventListener('pointerleave',scheduleCategoryClear);
     root.addEventListener('wheel',event=>{
       if(isUI(event.target))return;event.preventDefault();targetZoom=Math.max(CONFIG.zoomLimits.min,Math.min(CONFIG.zoomLimits.max,targetZoom*Math.exp(-event.deltaY*.001)));interact();
     },{passive:false});
-    root.addEventListener('keydown',event=>{
-      if(event.key==='Escape'){clearCategory();closeDetail(true);return;}
+    // Bound to the document: clicking open space leaves focus on the body, and
+    // Escape still has to reverse the zoom from there.
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){clearFocus();closeDetail(true);return;}
       if(event.target.closest('nav,.view-controls,#detail,.category,.category-name'))return;
       const keys={ArrowLeft:[-.15,0],ArrowRight:[.15,0],ArrowUp:[0,-.12],ArrowDown:[0,.12]};
       if(keys[event.key]){event.preventDefault();targetYaw+=keys[event.key][0];targetPitch=Math.max(-1.15,Math.min(1.15,targetPitch+keys[event.key][1]));interact();}
@@ -520,7 +562,10 @@
       const blend=reduced.matches?1:1-Math.exp(-delta*7);
       if(mode==='ecosystem'&&!reduced.matches&&!root.classList.contains('interacted')&&!gesture&&!selected&&!hovered&&!keyboardFocus&&!activeGroup&&now-lastInteraction>5500)targetYaw=.08*Math.sin((now-lastInteraction-5500)/18000);
       yaw=ease(yaw,targetYaw,blend);pitch=ease(pitch,targetPitch,blend);zoom=ease(zoom,targetZoom,blend);
-      galaxy.rotation.set(pitch,yaw,0);galaxy.position.y=27;
+      galaxy.rotation.set(pitch,yaw,0);
+      focusPan.lerp(focusPanTarget,blend*.55);
+      panned.copy(focusPan).applyEuler(galaxy.rotation);
+      galaxy.position.set(-panned.x,27-panned.y,0);
       farField.rotation.y=yaw*.06;farField.rotation.x=pitch*.04;
       camera.position.set(0,0,1040*Math.max(1,1.2*height/width)/zoom);camera.updateMatrixWorld();galaxy.updateMatrixWorld(true);
       const goal=mode==='prebuilt'?1:0;
@@ -595,6 +640,7 @@
         group.hoverBounds={left:Math.min(...xs)-18,right:Math.max(...xs)+18,top:Math.min(...ys)-18,bottom:Math.max(...ys)+18,cx:d3.mean(xs),cy:d3.mean(ys)};
       });
       layoutCategoryNames();detailPosition();
+      if(nameRevealFrames&&!--nameRevealFrames)nameLayer.classList.add('is-visible');
       raf=requestAnimationFrame(frame);
     }
     // Keep graphics and observers from outliving an embed that has navigated away.
