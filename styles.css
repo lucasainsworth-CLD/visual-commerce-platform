@@ -190,7 +190,11 @@ dt { color: #97a9c1; font-size: 11px; } dd { margin: 0; font: 11px monospace; }
 .enrich-embed { display: block; width: 100%; height: 540px; max-height: 900px; border: 0; border-radius: 12px; background: #06172c; }
 .transform-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 12px; background: #06172c; }
 .generate-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 12px; background: #06172c; }
+.connect-embed-wrap { position: relative; width: 100%; }
 .connect-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 15px; background: #0b1220; }
+.connect-experience-toggle { position: absolute; z-index: 2; top: 14px; right: 14px; padding: 0; border: 0; background: transparent; color: #8c96a5; font: 10px Inter, sans-serif; letter-spacing: .04em; cursor: pointer; }
+.connect-experience-toggle:hover, .connect-experience-toggle:focus-visible { color: #c2c8d1; text-decoration: underline; text-underline-offset: 3px; }
+.connect-experience-toggle:focus-visible { outline: 1px solid #8c96a5; outline-offset: 3px; }
 .orchestrate-embed { display: block; width: 100%; height: 540px; border: 0; border-radius: 15px; background: #0b1220; }
 
 .generate-showcase { position: relative; display: flex; min-height: 540px; align-items: center; gap: 14px; }

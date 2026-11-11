@@ -1,0 +1,6 @@
+id,name,category,role,logo_url,website_url,mcp_status,mcp_source,featured,display_tier,notes,category_fit,prominence,positioning_notes
+bynder,Bynder,dam,competitor,,,unknown,,true,hero,Visual commerce / DAM ecosystem node,5,4,"Subjective layout scores within the existing category; prominence is demo emphasis, not capability or compatibility."
+canto,Canto,dam,competitor,,,unknown,,true,standard,Visual commerce / DAM ecosystem node,5,3,"Subjective layout scores within the existing category; prominence is demo emphasis, not capability or compatibility."
+adobe-aem,Adobe AEM,dam,platform,,,unknown,,true,hero,Enterprise content and DAM platform,4,4,"Subjective layout scores within the existing category; prominence is demo emphasis, not capability or compatibility."
+algolia,Algolia,search,platform,,,unknown,,false,standard,Search and discovery platform,5,4,"Subjective layout scores within the existing category; prominence is demo emphasis, not capability or compatibility."
+snowflake,Snowflake,data,platform,,,unknown,,false,background,Data platform,5,4,"Subjective layout scores within the existing category; prominence is demo emphasis, not capability or compatibility."
