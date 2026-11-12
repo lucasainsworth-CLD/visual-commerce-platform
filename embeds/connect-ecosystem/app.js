@@ -300,7 +300,11 @@
     let width=0,height=0,yaw=0,pitch=-.12,targetYaw=0,targetPitch=-.12,zoom=CONFIG.presetZoom.ecosystem,targetZoom=CONFIG.presetZoom.ecosystem;
     let lastTime=performance.now(),lastInteraction=lastTime,hovered=null,selected=null,keyboardFocus=null;
     let shown=true,raf=0,destroyed=false;
-    let activeGroup=null,hoverCategory=null,focusCategory=null,categoryClearTimer=0;
+    // pinnedCategory is the click-opened region (state 1); focusCategory is only
+    // the keyboard tab-focus highlight. Kept apart because a label's native
+    // blur -- fired by any mousedown elsewhere, including the start of a drag --
+    // must not also drop a region the visitor opened by clicking.
+    let activeGroup=null,hoverCategory=null,focusCategory=null,pinnedCategory=null,categoryClearTimer=0;
     // The ecosystem view centers a clicked region by panning the galaxy, so the
     // region's own stars stay put in 3D and rotation keeps working while zoomed.
     let labelGroup=null,nameRevealFrames=0,nameClearTimer=0;
@@ -368,7 +372,7 @@
       categoryClearTimer=setTimeout(()=>{hoverCategory=null;refreshCategory();},220);
     }
     function clearCategory(){
-      clearTimeout(categoryClearTimer);hoverCategory=null;focusCategory=null;refreshCategory();
+      clearTimeout(categoryClearTimer);hoverCategory=null;focusCategory=null;pinnedCategory=null;refreshCategory();
     }
     // Regions have no geometry of their own, so a click lands in one by falling
     // inside its members' screen bounds; ties go to the nearest center.
@@ -380,15 +384,17 @@
     }
     function focusRegion(id){
       if(!groupById.has(id))return;
-      focusCategory=id;refreshCategory();
+      pinnedCategory=id;refreshCategory();
+      // Pan and zoom to the region, but leave yaw/pitch as the visitor left them --
+      // snapping the angle back to home on top of the pan is what felt jarring.
       focusPanTarget.copy(groupById.get(id).center);
-      targetZoom=CONFIG.focusZoom;targetYaw=0;targetPitch=-.12;interact();
+      targetZoom=CONFIG.focusZoom;interact();
     }
     function clearFocus(){
       clearCategory();focusPanTarget.set(0,0,0);targetZoom=CONFIG.presetZoom[mode];interact();
     }
     function refreshCategory(){
-      const next=groupById.get(hoverCategory||focusCategory)||null;
+      const next=groupById.get(hoverCategory||focusCategory||pinnedCategory)||null;
       if(next===activeGroup)return;
       activeGroup=next;root.dataset.activeCategory=next?.id||'';
       groups.forEach(group=>{group.element?.classList.toggle('active',group===next);group.element?.setAttribute('aria-expanded',String(group===next));});
@@ -506,10 +512,11 @@
           if(gesture.company)openDetail(gesture.company);
           else{
             closeDetail();
-            // A click inside a region opens it; a click on open space reverses both
-            // the zoom and the names. Name labels do not take the pointer, so a
-            // click on one lands in its own region and keeps it open.
-            if(mode==='ecosystem'){const region=regionAt(event.clientX,event.clientY);region?focusRegion(region.id):clearFocus();}
+            // A click inside a region opens it. A click on open space does nothing
+            // to the focus -- it stays open until another region or a mode button
+            // closes it. Name labels do not take the pointer, so a click on one
+            // lands in its own region and keeps it open.
+            if(mode==='ecosystem'){const region=regionAt(event.clientX,event.clientY);if(region)focusRegion(region.id);}
           }
         }
         gesture=null;

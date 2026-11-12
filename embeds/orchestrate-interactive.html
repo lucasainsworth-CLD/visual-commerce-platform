@@ -11,13 +11,16 @@
       /* The canvas borrows MediaFlows' own layout language -- a trigger at the top, a spine
          that forks into parallel branches, rounded blocks with a category-coloured icon tile
          -- in the deck's dark palette so the slide still belongs to the rest of the story. */
-      .stage { position: relative; display: grid; width: 100%; height: 100%; grid-template-rows: auto 1fr auto; overflow: hidden; border: 1px solid rgba(185,212,255,.16); border-radius: 15px; background: #0b1220; }
+      /* --vscale stretches only the canvas's vertical rhythm -- cell heights and
+         connector lengths -- so the diagram fills the taller stage without
+         touching type sizes, icon tiles or horizontal measure. */
+      .stage { --vscale: 1.4; position: relative; display: grid; width: 100%; height: 100%; grid-template-rows: auto 1fr auto; overflow: hidden; border: 1px solid rgba(185,212,255,.16); border-radius: 15px; background: #0b1220; }
       .stage > header { display: flex; justify-content: space-between; gap: 12px; padding: 14px 17px; border-bottom: 1px solid rgba(185,212,255,.16); color: #aebed2; font: 10px monospace; letter-spacing: .12em; }
 
       .canvas { position: relative; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; gap: 0; padding: 16px 18px 10px; overflow: hidden; background-image: linear-gradient(#7096d115 1px, transparent 1px), linear-gradient(90deg, #7096d115 1px, transparent 1px); background-size: 34px 34px; }
 
       /* ---- blocks ---- */
-      .node { position: relative; display: flex; width: 100%; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid rgba(143,208,248,.3); border-radius: 10px; background: linear-gradient(165deg, #10294c, #0a1b33); color: inherit; cursor: pointer; font: inherit; text-align: left; transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease, opacity .2s ease; }
+      .node { position: relative; display: flex; width: 100%; min-height: calc(46px * var(--vscale)); align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid rgba(143,208,248,.3); border-radius: 10px; background: linear-gradient(165deg, #10294c, #0a1b33); color: inherit; cursor: pointer; font: inherit; text-align: left; transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease, opacity .2s ease; }
       .node:hover { border-color: rgba(98,213,238,.55); transform: translateY(-1px); }
       .node:focus-visible { outline: 2px solid #62d5ee; outline-offset: 2px; }
       .node.is-open { border-color: #62d5ee; box-shadow: 0 0 0 1px rgba(98,213,238,.3), 0 14px 32px rgba(0,0,0,.45); }
@@ -36,12 +39,12 @@
       .bolt svg { width: 10px; height: 10px; fill: #fff; stroke: none; }
 
       /* ---- connectors ---- */
-      .link { position: relative; width: 2px; height: var(--len, 24px); background: rgba(118,160,224,.42); }
+      .link { position: relative; width: 2px; height: calc(var(--len, 24px) * var(--vscale)); background: rgba(118,160,224,.42); }
       .link::before, .link::after { position: absolute; left: 50%; width: 6px; height: 6px; border: 1.5px solid #6f8dc4; border-radius: 50%; background: #0b1220; content: ''; transform: translateX(-50%); }
       .link::before { top: -3px; }
       .link::after { bottom: -3px; }
 
-      .fork { width: 100%; height: 46px; }
+      .fork { width: 100%; height: calc(46px * var(--vscale)); }
       .fork svg { display: block; width: 100%; height: 100%; overflow: visible; }
       .fork path { fill: none; stroke: rgba(118,160,224,.42); stroke-width: 2; }
       .fork circle.pip { fill: #0b1220; stroke: #6f8dc4; stroke-width: 1.5; }
@@ -49,7 +52,7 @@
       /* ---- branches ---- */
       .branches { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; align-content: start; justify-items: center; }
       .branch { display: grid; width: 100%; justify-items: center; gap: 0; }
-      .branch > p { display: flex; align-items: center; gap: 6px; margin: 0 0 9px; color: #7f97b6; font: 8px monospace; letter-spacing: .12em; text-transform: uppercase; }
+      .branch > p { display: flex; align-items: center; gap: 6px; margin: 0 0 calc(9px * var(--vscale)); color: #7f97b6; font: 8px monospace; letter-spacing: .12em; text-transform: uppercase; }
       .branch > p b { color: var(--tone); font-weight: 400; }
 
       /* ---- downstream rail ---- */
@@ -79,6 +82,12 @@
       .detail dt { color: #7f97b6; font: 8.5px monospace; letter-spacing: .05em; text-transform: uppercase; }
       .detail dd { margin: 0; color: #d7e6f7; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
       .detail .aside { margin: 9px 0 0; padding: 7px 8px; border-left: 2px solid var(--tone, #62d5ee); border-radius: 0 5px 5px 0; background: rgba(98,213,238,.08); color: #bcd0e6; font-size: 9.5px; line-height: 1.5; }
+
+      /* Narrow embeds wrap the node text onto more lines and are already tight for
+         height, so they keep the original rhythm rather than the stretched one. */
+      @media (max-width: 560px) {
+        .stage { --vscale: 1; }
+      }
 
       @media (prefers-reduced-motion: reduce) {
         .node, .chip { transition: none; }

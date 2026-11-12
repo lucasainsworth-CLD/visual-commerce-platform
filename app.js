@@ -995,21 +995,6 @@ $('#change-asset').onclick = () => openUploadWidget();
 $('#enrich-visual').onload = syncEnrichVisual;
 $('#transform-visual').onload = syncTransformVisual;
 $('#generate-visual').onload = syncGenerateVisual;
-const connectVisual = $('#connect-visual');
-const connectExperienceToggle = $('#connect-experience-toggle');
-let connectExperience = 'ecosystem';
-const connectExperienceUrls = {
-  ecosystem: 'embeds/connect-ecosystem/connect.html?v=20261111-2',
-  classic: 'embeds/connect-interactive.html?v=20261105-5'
-};
-connectExperienceToggle.onclick = () => {
-  connectExperience = connectExperience === 'ecosystem' ? 'classic' : 'ecosystem';
-  connectVisual.src = connectExperienceUrls[connectExperience];
-  const showingClassic = connectExperience === 'classic';
-  connectExperienceToggle.textContent = showingClassic ? 'slide' : 'graphic';
-  connectExperienceToggle.title = showingClassic ? 'Switch to the graphic view' : 'Switch to the slide view';
-  connectExperienceToggle.setAttribute('aria-pressed', String(showingClassic));
-};
 addEventListener('message', (event) => {
   if (event.origin !== location.origin) return;
   const type = event.data?.type;
