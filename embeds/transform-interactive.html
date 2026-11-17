@@ -26,6 +26,24 @@
       /* r_max delivers a genuinely round image, so the tile's own square frame and fill
          would box it back in. The border and shadow follow the circle instead. */
       .variant.is-round img { border-radius: 50%; background: transparent; }
+      /* A transparent PNG delivered through a crop keeps its alpha, so the stage's dark
+         fill shows through the subject's cut-out. White reads as a studio backdrop and
+         matches how these renditions land on a product page. */
+      .stage.is-alpha .source img, .stage.is-alpha .variant img { background: #fff; }
+      /* A derived asset is rendered on first request, so a heavy generative transform can
+         take a few seconds. Hold the tile's slot with a generating placeholder instead of
+         letting the browser paint a broken image. */
+      .variant .pending { display: none; place-content: center; justify-items: center; gap: 6px; width: min(var(--variant-w, 108px), calc(var(--variant-max-h, 182px) / var(--tile-tall, 1))); aspect-ratio: 1 / var(--tile-tall, 1); border: 1px dashed rgba(143,208,248,.5); border-radius: 5px; background: rgba(12,34,59,.9); color: #91b9e9; font: 8px Inter, Arial, sans-serif; text-align: center; }
+      .variant .pending b { display: block; max-width: 86%; font-weight: 500; line-height: 1.4; }
+      .variant .pending .spinner { width: 16px; height: 16px; border-width: 2px; }
+      .variant .pending .stalled-label, .variant .pending .blocked-label { display: none; }
+      .variant.is-pending .pending { display: grid; }
+      .variant.is-pending img { display: none; }
+      .variant.is-stalled .pending .spinner, .variant.is-stalled .pending .pending-label { display: none; }
+      .variant.is-stalled .pending .stalled-label { display: block; }
+      .variant.is-stalled.is-blocked .pending .stalled-label { display: none; }
+      .variant.is-stalled.is-blocked .pending .blocked-label { display: block; }
+      .variant.is-stalled .pending { border-color: rgba(143,208,248,.32); color: #b8cae1; }
       .variant figcaption { position: absolute; top: calc(100% + 5px); left: 50%; display: block; width: max-content; max-width: 180px; transform: translateX(-50%); color: #eaf6ff; font: 9px Inter, Arial, sans-serif; white-space: nowrap; }
       .variant figcaption b { display: block; font-weight: 600; }
       .variant figcaption code { display: none; margin-top: .35em; max-width: 34em; color: #93d3f5; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8em; line-height: 1.5; white-space: normal; word-break: break-word; }
@@ -172,6 +190,56 @@
         const target = generativeTransform.test(transformation) ? framedWidth : width;
         const sized = transformation.replace(/w_500/g, `w_${target}`);
         return source.replace('/image/upload/', `/image/upload/${sized}/`);
+      }
+
+      // b_gen_fill is rejected outright for a transparent source ("b_gen_fill is not
+      // supported for images with transparency"), so that tile becomes a plain pad onto a
+      // brand-blue backdrop. Generative background replacement does work on transparency,
+      // so it is left alone.
+      const brandBackdrop = '1b5fc9';
+      function transformForAsset(item, transparent) {
+        if (!transparent || !/b_gen_fill/.test(item.value)) return item;
+        const ratio = /ar_\d+:\d+/.exec(item.value)?.[0] || 'ar_1:1';
+        return { label: 'Blue backdrop', value: `c_pad,b_rgb:${brandBackdrop},${ratio},w_500/f_auto/q_auto` };
+      }
+
+      // Alpha is not reported with the asset, and a .png is not transparent by definition,
+      // so read it off the pixels of a small PNG rendition. Cached per source: render()
+      // also runs on resize, and the answer cannot change under it.
+      let alphaProbe = { source: null, promise: null, result: false };
+      function probeAlpha(source) {
+        if (alphaProbe.source === source) return alphaProbe.promise;
+        const probing = new Promise((resolve) => {
+          if (!source.includes('/image/upload/')) { resolve(false); return; }
+          const probe = new Image();
+          probe.crossOrigin = 'anonymous';
+          probe.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = probe.naturalWidth;
+              canvas.height = probe.naturalHeight;
+              const context = canvas.getContext('2d');
+              context.drawImage(probe, 0, 0);
+              const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+              let transparent = false;
+              for (let index = 3; index < data.length; index += 4) {
+                if (data[index] < 250) { transparent = true; break; }
+              }
+              resolve(transparent);
+            } catch (error) {
+              // A tainted canvas or a blocked read is not a reason to restyle the stage.
+              resolve(false);
+            }
+          };
+          probe.onerror = () => resolve(false);
+          // f_png keeps the alpha channel that f_auto would hand to a lossy format.
+          probe.src = source.replace('/image/upload/', '/image/upload/c_scale,w_40/f_png/');
+        }).then((result) => {
+          if (alphaProbe.source === source) alphaProbe.result = result;
+          return result;
+        });
+        alphaProbe = { source, promise: probing, result: false };
+        return probing;
       }
 
       function clamp(value, minimum, maximum) {
@@ -396,10 +464,65 @@
         layoutVariants();
       }
 
+      // Cloudinary builds a derived asset on first request, and a generative transform can
+      // answer with an error while that work is still running. Mark the tile as generating
+      // and keep asking until the rendition lands, rather than showing a broken image.
+      const retryDelays = [1200, 2000, 3000, 5000, 7000, 9000, 12000, 15000];
+
+      // An <img> cannot say why it failed. A HEAD on the same URL can: Cloudinary answers
+      // 423 while a derived asset is still rendering, and a 4xx for a rendition that will
+      // never arrive, which is not worth asking about for another minute. The reason goes
+      // to the console rather than onto the stage.
+      async function failureIsTransient(url) {
+        try {
+          const response = await fetch(url, { method: 'HEAD' });
+          if (response.ok) return true;
+          const reason = response.headers.get('x-cld-error');
+          if (reason) console.warn(`Transformation unavailable (${response.status}): ${reason}`);
+          return response.status === 423 || response.status === 429 || response.status >= 500;
+        } catch (error) {
+          // A network hiccup says nothing about the rendition itself; keep trying.
+          return true;
+        }
+      }
+      function loadTile(point, image, url) {
+        // A tile can be reloaded (a retry, or a new asset), so older attempts must not
+        // resolve over the current one.
+        const run = (image.__run = (image.__run || 0) + 1);
+        let attempt = 0;
+        point.pending = true;
+        point.node.classList.add('is-pending');
+        point.node.classList.remove('is-stalled', 'is-blocked');
+        image.onload = () => {
+          if (image.__run !== run) return;
+          point.pending = false;
+          point.node.classList.remove('is-pending', 'is-stalled', 'is-blocked');
+          scheduleRelayout();
+        };
+        image.onerror = async () => {
+          if (image.__run !== run) return;
+          const delay = retryDelays[attempt];
+          attempt += 1;
+          const transient = await failureIsTransient(image.src);
+          if (image.__run !== run) return;
+          if (!transient) { point.node.classList.add('is-stalled', 'is-blocked'); return; }
+          if (delay === undefined) { point.node.classList.add('is-stalled'); return; }
+          setTimeout(() => {
+            if (image.__run !== run) return;
+            // A fresh query string keeps the browser from replaying its cached error. The
+            // transformation, and so the derived asset, is unchanged.
+            image.src = `${url}${url.includes('?') ? '&' : '?'}_attempt=${attempt}`;
+          }, delay);
+        };
+        image.src = url;
+      }
+
       function render(source) {
         currentSource = source;
         const bounds = stage.getBoundingClientRect();
         if (!bounds.width || !bounds.height) return;
+        const transparent = alphaProbe.source === source && alphaProbe.result;
+        stage.classList.toggle('is-alpha', transparent);
         sourceImage.src = deliveryUrl(source, 'c_scale,w_300/f_auto/q_auto');
         variants.replaceChildren();
         leaders.replaceChildren();
@@ -407,16 +530,29 @@
         expandedPoint = undefined;
         const centerX = bounds.width / 2;
         const centerY = bounds.height / 2;
-        transformations.forEach((item, index) => {
+        transformations.map((entry) => transformForAsset(entry, transparent)).forEach((item, index) => {
           const angle = (-90 + index * 360 / transformations.length) * Math.PI / 180;
           const baseX = centerX + Math.cos(angle) * bounds.width * .37;
           const baseY = centerY + Math.sin(angle) * bounds.height * .36;
           const figure = document.createElement('figure');
           figure.className = /r_max/.test(item.value) ? 'variant is-round' : 'variant';
+          figure.style.setProperty('--tile-tall', tallness(item.value));
           const image = document.createElement('img');
-          image.src = deliveryUrl(source, item.value);
           image.alt = item.label;
-          image.addEventListener('load', scheduleRelayout);
+          const pending = document.createElement('i');
+          pending.className = 'pending';
+          const pendingSpinner = document.createElement('i');
+          pendingSpinner.className = 'spinner';
+          const pendingLabel = document.createElement('b');
+          pendingLabel.className = 'pending-label';
+          pendingLabel.textContent = 'Generating\u2026';
+          const stalledLabel = document.createElement('b');
+          stalledLabel.className = 'stalled-label';
+          stalledLabel.textContent = 'Still working \u2014 click to retry';
+          const blockedLabel = document.createElement('b');
+          blockedLabel.className = 'blocked-label';
+          blockedLabel.textContent = 'Unavailable \u2014 click to retry';
+          pending.append(pendingSpinner, pendingLabel, stalledLabel, blockedLabel);
           const caption = document.createElement('figcaption');
           const captionLabel = document.createElement('b');
           captionLabel.textContent = item.label;
@@ -427,7 +563,7 @@
             : item.value;
           captionSyntax.textContent = shownValue.replace(/\/f_auto\/q_auto$/, '').replace(/l_fetch:[A-Za-z0-9_-]+/, 'l_fetch:\u2026');
           caption.append(captionLabel, captionSyntax);
-          figure.append(image, caption);
+          figure.append(pending, image, caption);
           variants.append(figure);
           const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
           gradient.id = `transform-leader-${index}`;
@@ -446,8 +582,9 @@
           line.setAttribute('stroke', `url(#transform-leader-${index})`);
           leaders.append(line);
           const point = { node: figure, line, gradient, value: item.value, x: baseX, y: baseY, baseX, baseY, expanded: false, scale: 1, repelX: 0, repelY: 0 };
+          loadTile(point, image, deliveryUrl(source, item.value));
           figure.addEventListener('pointerenter', () => {
-            if (framedPoint) return;
+            if (framedPoint || point.pending) return;
             if (expandedPoint && expandedPoint !== point) blurPoint(expandedPoint);
             focusPoint(point);
             expandedPoint = point;
@@ -456,13 +593,19 @@
           // Click opens the tile full-frame, uncropped; clicking again reverts.
           figure.addEventListener('click', (event) => {
             event.stopPropagation();
+            // Nothing to open while the rendition is still being built; a stalled tile
+            // takes the click as a retry instead.
+            if (point.pending) {
+              if (point.node.classList.contains('is-stalled')) loadTile(point, image, deliveryUrl(currentSource, item.value));
+              return;
+            }
             if (framedPoint === point) { unframePoint(point); return; }
             if (framedPoint) unframePoint(framedPoint);
             framePoint(point);
           });
           points.push(point);
         });
-        stage.className = 'stage ready';
+        stage.className = transparent ? 'stage ready is-alpha' : 'stage ready';
         // build() seeds each point at its index's ring position; reseed() reassigns those
         // slots by crop shape, so it has to run before the first layout, not only on resize.
         requestAnimationFrame(() => { reseed(); layoutVariants(); });
@@ -517,7 +660,10 @@
         if (event.data?.type === 'transform:ready') {
           currentSubject = event.data.subject;
           transformations = transformationSets[currentSubject] || transformationSets[fallbackSubject];
-          render(event.data.imageUrl);
+          const source = event.data.imageUrl;
+          // Waiting on the probe keeps the ring from being built twice; it is a 40px PNG,
+          // and the stage holds its current state meanwhile.
+          probeAlpha(source).then(() => { if (alphaProbe.source === source) render(source); });
         }
       });
       parent.postMessage({ type: 'transform:loaded' }, location.origin);

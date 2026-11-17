@@ -63,6 +63,7 @@ let latestTransformAsset;
 let generateDecision;
 let assetIsSample = false;
 let originalAssetBytes;
+let assetWidth;
 let optimizeMeasurementRequest = 0;
 let deliverMeasurementRequest = 0;
 let assetPollingToken = 0;
@@ -257,6 +258,7 @@ function updateAsset(info) {
   latestModerationAsset = undefined;
   latestAssetFingerprint = undefined;
   originalAssetBytes = info.bytes || info.size || undefined;
+  assetWidth = Number(info.width) || undefined;
   document.querySelectorAll('[data-img]').forEach((image) => { image.src = source; });
   const preview = new Image();
   preview.onload = () => {
@@ -264,6 +266,9 @@ function updateAsset(info) {
     $('#dims').textContent = dimensions;
     const optimizeDimensions = $('#optimize-original-dimensions');
     if (optimizeDimensions) optimizeDimensions.textContent = dimensions;
+    // The upload response is the first source of the asset's width, but a sample asset
+    // arrives without one; the preview that is loading anyway can supply it.
+    setAssetWidth(preview.naturalWidth);
   };
   preview.src = source;
   $('#format').textContent = (info.format || info.type || 'JPG').replace('image/', '').toUpperCase();
@@ -275,12 +280,34 @@ function updateAsset(info) {
   updateDeliverVariants();
 }
 
+// The storefront width this stage tells its story at. An asset narrower than this would
+// be upscaled by c_scale,w_1200 — delivered larger than the original, which is the
+// opposite of the point being made — so the request is capped at the asset's own width.
+const optimizeDeliveryWidth = 1200;
+
+function optimizeWidth() {
+  return assetWidth ? Math.min(optimizeDeliveryWidth, assetWidth) : optimizeDeliveryWidth;
+}
+
+// Width can arrive after the first delivery render (from the upload response, or from the
+// preview image). Re-render only when it actually changes what is requested.
+function setAssetWidth(width) {
+  const resolved = Number(width) || undefined;
+  if (!resolved || resolved === assetWidth) return;
+  const before = optimizeWidth();
+  assetWidth = resolved;
+  if (assetSource && optimizeWidth() !== before) updateOptimizeDelivery();
+}
+
 function updateOptimizeDelivery() {
   const image = $('#optimize-delivery');
   if (!image || !assetSource) return;
+  const transformation = `c_scale,w_${optimizeWidth()}/f_auto/q_auto`;
   const deliveryUrl = assetSource.includes('/image/upload/')
-    ? assetSource.replace('/image/upload/', '/image/upload/c_scale,w_1200/f_auto/q_auto/')
+    ? assetSource.replace('/image/upload/', `/image/upload/${transformation}/`)
     : assetSource;
+  const label = $('#optimize-delivery-transformation');
+  if (label) label.textContent = transformation.replace(/\//g, ',');
   image.src = deliveryUrl;
   updateOptimizeMeasurements(assetSource, deliveryUrl);
 }
@@ -736,6 +763,7 @@ function renderAssetData(asset) {
   latestAssetFingerprint = fingerprint;
   $('#metadata-output').textContent = JSON.stringify(output, null, 2);
   if (asset.width && asset.height) {
+    setAssetWidth(asset.width);
     const dimensions = asset.width + ' × ' + asset.height + ' px';
     $('#dims').textContent = dimensions;
     const optimizeDimensions = $('#optimize-original-dimensions');
