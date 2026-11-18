@@ -1,0 +1,11 @@
+view_id,category_id,label,order
+default,commerce,Commerce,1
+default,pim,PIM,2
+default,cms,CMS / DXP,3
+default,creative,Creative,4
+default,marketing,Marketing,5
+default,workflow,Workflow,6
+default,analytics,Analytics,7
+default,dam,DAM,8
+default,data,Data,9
+default,ai,AI & Agents,10
